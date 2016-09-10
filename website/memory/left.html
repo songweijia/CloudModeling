@@ -1,0 +1,48 @@
+<html>
+ <head>
+  <script>
+   function changeMemView(msrc){
+    parent.main_panel.location=msrc;
+   }
+  </script>
+ </head>
+ <body>
+  <ol>
+   <li><a href=# onclick="changeMemView('histograms.html')">Histograms</a></li>
+   <li>By Providor
+    <ul>
+     <li>Amazon EC2
+	  <ul>
+	   <li><a href=# onclick="changeMemView('amz.m3.medium.html')">m3.medium</a></li>
+	   <li><a href=# onclick="changeMemView('amz.c3.large.html')">c3.large</a></li>
+	   <li><a href=# onclick="changeMemView('amz.c4.large.html')">c4.large</a></li>
+	  </ul>
+	 </li>
+     <li>Google Compute Engine
+	  <ul>
+	   <li><a href=# onclick="changeMemView('ggl.n1s1.html')">n1-standard-1</a></li>
+	   <li><a href=# onclick="changeMemView('ggl.n1s2.html')">n1-standard-2</a></li>
+	  </ul>
+	 </li>
+     <li>Microsoft Azure
+	  <ul>
+	   <li><a href=# onclick="changeMemView('azure.ds1v2.html')">Standard DS1</a></li>
+	   <li><a href=# onclick="changeMemView('azure.ds2v2.html')">Standard DS2</a></li>
+	  </ul>
+	 </li>
+     <li>Fractus
+      <ul>
+       <li><a href=# onclick="changeMemView('fractus_bm.html')">Fractus Bare Metal</a></li>
+       <li><a href=# onclick="changeMemView('fractus_vm.html')">Fractus Virtual Machine</a></li>
+      </ul>
+     </li>
+     <li>Local
+      <ul>
+       <li><a href=# onclick="changeMemView('desktop.html')">Dell Optiplex 760</a></li>
+      </ul>
+     </li>
+    </ul>
+   </li>
+  </ol>
+ </body>
+</html>
