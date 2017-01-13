@@ -418,7 +418,7 @@ class CPUMemPack(Pack):
     plt.legend([l1c,l2c,l3c,mem],['L1 Cache','L2 Cache','L3 Cache','SDRAM'],ncol=2)
     ax = plt.gca()
     ax.set_xlim(sraw[:,0][0],sraw[:,0][-1])
-    # ax.set_ylim(0,130)
+    ax.set_ylim(0,numpy.max(sraw[:,1:5])*1.5)
     ax.set_xlabel('Time (second)')
     ax.set_ylabel('Read Latency (ns)')
     plt.savefig('/'.join((figs_path,"rr.%s.lat.eps" % host_alias)));
