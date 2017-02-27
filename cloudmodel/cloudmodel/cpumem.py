@@ -21,6 +21,7 @@ class CPUMemPack(Pack):
     self._packages = []
     self._packages.append({'apt':'gcc','apt-get':'gcc','yum':'gcc'})
     self._packages.append({'apt':'make','apt-get':'make','yum':'make'})
+    self._packages.append({'apt':'bc','apt-get':'bc','yum':'bc'})
     self._data_path = 'data'
     self._figs_path = 'figs'
 
@@ -40,7 +41,7 @@ class CPUMemPack(Pack):
     util.remote_exec(ssh_client, commands=['cd %s; tar -xf benchmark.tgz' % remote_path], verifiers=[None])
     logger.debug("benchmark.tgz unpacked")
 
-  def run_sequential_read_write(self, ssh_client, host_alias, remote_path, work_path, data_path):
+  def run_sequential_read_write(self, ssh_client, host_alias, remote_path, work_path, data_path, multicores=False):
     """
     run sequential_read_write benchmark
     test name: sequential_read_write
@@ -50,14 +51,23 @@ class CPUMemPack(Pack):
     - remote_path: remote path
     - work_path: local path
     - data_path: data path
+    - multicores: are we going to run this on multiple CPU cores. default is False
     return: timestamp.
     """
     # run experiments
-    util.remote_exec(ssh_client, commands=['cd %s;./srw.sh' % remote_path], verifiers=[None])
+    if multicores == False: # only for CPU 0
+      util.remote_exec(ssh_client, commands=['cd %s;./srw.sh 0' % remote_path], verifiers=[None])
+    else: # - for all CPU cores
+      util.remote_exec(ssh_client, commands=['cd %s;./msrw.sh' % remote_path], verifiers=[None])
     logger.debug("sequential_read_write test finished.")
     # collect results
     timestamp = int(round(time.time()))
-    util.download(ssh_client,"%s/data/srw.result" % remote_path, "%s/srw.%s.%d" % (data_path,host_alias,timestamp) )
+    sftp_client = ssh_client.open_sftp()
+    for raw_file in sftp_client.listdir('%s/data/' % remote_path):
+      # match raw_file with srw.result.${core_id}
+      if raw_file.startswith("srw.result"):
+        util.download(ssh_client,"%s/data/%s" % (remote_path, raw_file), "%s/%s.%s.%d" % (data_path,raw_file,host_alias,timestamp))
+    sftp_client.close()
     logger.debug("sequential_read_write data collected.")
     # clean remote garbage
     util.remote_exec(ssh_client, commands=['cd %s;rm -rf data/*' % remote_path], verifiers=[None])
@@ -70,7 +80,7 @@ class CPUMemPack(Pack):
     output: rr[1/2/3/4].[host].[sec]
     """
     # get test sizes
-    csdat = numpy.loadtxt('/'.join((data_path,"srw.%s.%d.cs" % (host,sec))));
+    csdat = numpy.loadtxt('/'.join((data_path,"srw.0.%s.%d.cs" % (host,sec))));
     bfsz = [csdat[0][0]/2, \
       (csdat[0][1] + csdat[1][0])/2, \
       (csdat[1][1] + csdat[2][0])/2, \
@@ -83,20 +93,17 @@ class CPUMemPack(Pack):
     util.remote_exec(ssh_client, commands=['cd %s;rm -rf data/*' % remote_path], verifiers=[None])
     logger.debug("sequential_read_write data remote cleaned up.")
 
-  def analyze_sequential_read_write_preprocess(self,data_path,host,sec):
+  def analyze_sequential_read_write_preprocess(self,data_path,core_id,host,sec):
     """
     convert raw file to data file:
     <buffer size in kb> <read> <write> <stride read> <stride write> 
     there are two files to be generated here:
-    srw.<host>.<sec>.dat is the file with all raw data
-    srw.<host>.<sec>.max has the file for only the maximum value for same tests
+    srw.<core_id>.<host>.<sec>.dat is the file with all raw data
+    srw.<core_id>.<host>.<sec>.max has the file for only the maximum value for same tests
     """
     logger.debug("begin preprocessing srw data.")
-    #for h in host_dict.keys():
-    #  for s in host_dict[h]:
     # prepare raw data file.
-    finn = '/'.join((data_path,"srw.%s.%d" % (host,sec)))
-    fin = open(finn,'r')
+    fin = open('/'.join((data_path,"srw.result.%d.%s.%d" % (core_id,host,sec))),'r')
     raw = []
     while True:
       # read a line
@@ -108,24 +115,24 @@ class CPUMemPack(Pack):
     fin.close()
     raw = numpy.array(raw)
     raw = raw[raw[:,0].argsort()] # sort
-    numpy.savetxt('/'.join((data_path,"srw.%s.%d.dat" % (host,sec))), raw, fmt='%.4f')
+    numpy.savetxt('/'.join((data_path,"srw.%d.%s.%d.dat" % (core_id,host,sec))), raw, fmt='%.4f')
     # prepare max data file for kmeans. 'max' means that, for each value, we pick the maximum throughput in repeated experiments
     mraw = [] # max rows after group
     for (k,g) in groupby(raw,lambda x:x[0]):
       vec = numpy.array(list(g))
       mraw.append(numpy.amax(vec,axis=0))
     mraw = numpy.array(mraw)
-    numpy.savetxt('/'.join((data_path,"srw.%s.%d.max" % (host,sec))), mraw, fmt='%.4f')
+    numpy.savetxt('/'.join((data_path,"srw.%d.%s.%d.max" % (core_id,host,sec))), mraw, fmt='%.4f')
     logger.debug("finished preprocessing srw data.")
 
-  def analyze_sequential_read_write_kmeans_thp(self,data_path,host,sec):
+  def analyze_sequential_read_write_kmeans_thp(self,data_path,core_id,host,sec):
     """
     get key means throughput
     return centroids, and write to file: srw.host.sec.thp
     """
-    logger.debug("begin k-means thp for %s@%d." % (host,sec))
+    logger.debug("begin k-means thp for core%d %s@%d." % (core_id,host,sec))
     # STEP 1 load data
-    mraw = numpy.loadtxt('/'.join((data_path,"srw.%s.%d.max" % (host,sec))))
+    mraw = numpy.loadtxt('/'.join((data_path,"srw.%d.%s.%d.max" % (core_id,host,sec))))
     dat = numpy.delete(mraw,0,1) # get rid of the buffer size
     # STEP 2 k-means
     wdat = whiten(dat) # whitening
@@ -134,19 +141,19 @@ class CPUMemPack(Pack):
     centroids = wcentroids * numpy.std(dat,0) # unwhitening
     centroids = centroids[(-centroids[:,0]).argsort()] # sorting
     # STEP 3 write to file
-    numpy.savetxt('/'.join((data_path,"srw.%s.%d.thp" % (host,sec))),centroids,fmt='%.4f')
+    numpy.savetxt('/'.join((data_path,"srw.%d.%s.%d.thp" % (core_id,host,sec))),centroids,fmt='%.4f')
     logger.debug("finished k-means thp for %s@%d." % (host,sec))
     return centroids
 
-  def analyze_sequential_read_write_cache_size(self,data_path,host,sec):
+  def analyze_sequential_read_write_cache_size(self,data_path,core_id,host,sec):
     """
     calculate cache size using stride read [:2]
     output: srw.<host>.<sec>.cs
     """
-    logger.debug("begin calculating cache size for %s@%d." % (host,sec))
-    mraw = numpy.loadtxt('/'.join((data_path,"srw.%s.%d.max" % (host,sec))))
+    logger.debug("begin calculating cache size for core%d %s@%d." % (core_id,host,sec))
+    mraw = numpy.loadtxt('/'.join((data_path,"srw.%d.%s.%d.max" % (core_id,host,sec))))
     stride_read_max = mraw[:,(0,3)] # use only stride read data(3).
-    thp = numpy.loadtxt('/'.join((data_path,"srw.%s.%d.thp" % (host,sec))))
+    thp = numpy.loadtxt('/'.join((data_path,"srw.%d.%s.%d.thp" % (core_id,host,sec))))
     stride_read_thp = thp[:,2] # the third column(idx:2) is the stride read column
     cache_sizes = []
     range_factor = 0.1 # TODO: is 0.1 good?
@@ -154,7 +161,7 @@ class CPUMemPack(Pack):
       lower = max([k for (k,v) in stride_read_max if v > (stride_read_thp[idx] - (stride_read_thp[idx]-stride_read_thp[idx+1]) * range_factor )])
       upper = min([k for (k,v) in stride_read_max if v < (stride_read_thp[idx+1] + (stride_read_thp[idx]-stride_read_thp[idx+1]) * range_factor )])
       cache_sizes.append((lower,upper))
-    numpy.savetxt('/'.join((data_path,"srw.%s.%d.cs" % (host,sec))),numpy.array(cache_sizes),fmt="%.0f")
+    numpy.savetxt('/'.join((data_path,"srw.%d.%s.%d.cs" % (core_id,host,sec))),numpy.array(cache_sizes),fmt="%.0f")
     logger.debug("finished calculating cache size for %s@%d." % (host,sec))
 
   def analyze_sequential_read_write(self,data_path,host,sec):
@@ -167,28 +174,40 @@ class CPUMemPack(Pack):
     - host_dict the metadata including all the raw data files like: {'host1':[t1,t2,t3,...],'host2':[t1,t2,t3,...]}
     OUTPUT:
     =======
-    - srw.[hostname].[secs].thp
-    - srw.[hostname].[secs].cs
-    - srw.[hostname].[secs].thp.eps
-    - srw.[hostname].l1/l2/l3size.eps
+    - srw.[core_id].[hostname].[secs].thp
+    - srw.[core_id].[hostname].[secs].cs
+    - srw.[core_id].[hostname].[secs].thp.eps
+    - srw.[core_id].[hostname].l1/l2/l3size.eps
     PROCEDURES:
     ===========
-    1. srw.[hostname].[secs] ==> srw.[hostname].[secs].thp
-    2. srw.[hostname].[secs] + srw.[hostname].[secs].thp ==> srw.[hostname].size.[secs]
-    3. srw.[hostname].[secs] ==> srw.[hostname].[secs].thp.eps
-    4. srw.[hostname].size.[secs] ==> srw.[hostname].l1/2/3size.eps
+    1. srw.result.[core_id].[hostname].[secs] ==> srw.[core_id.][hostname].[secs].thp
+    2. srw.result.[core_id].[hostname].[secs] + srw.[core_id.][hostname].[secs].thp ==> srw.[hostname].size.[secs]
+    3. srw.result.[core_id].[hostname].[secs] ==> srw.[core_id.][hostname].[secs].thp.eps
+    4. srw.result.[core_id].[hostname].size.[secs] ==> srw.[core_id.][hostname].l1/2/3size.eps
     FORMATS:
     ========
-    In src.[hostname].[secs].thp, we have four lines for L1,L2,L3, and memory throughput. each line has four values in GByte/s
+    In src.result.[core_id].[hostname].[secs].thp, we have four lines for L1,L2,L3, and memory throughput. each line has four values in GByte/s
     <read> <write> <stride_read> <stride_write>
-    In src.[hostname].size.[secs], we have one line for the size of L1/2/3 cache in KByte
+    In src.result.[core_id].[hostname].size.[secs], we have one line for the size of L1/2/3 cache in KByte
     <L1> <L2> <L3>
     """
-    # STEP 1 preprocessing
-    self.analyze_sequential_read_write_preprocess(data_path,host,sec)
-    # STEP 2 get keams throughputs and cache size
-    self.analyze_sequential_read_write_kmeans_thp(data_path,host,sec)
-    self.analyze_sequential_read_write_cache_size(data_path,host,sec)
+    for finn in os.listdir(data_path):
+      ftks = finn.split('.')
+      # ftks[0] - srw
+      # ftks[1] - result
+      # ftks[2] - core_id
+      # ftks[3] - host
+      # ftks[4] - sec
+      # ftks[5] - dat
+      if ftks[0] != 'srw' or ftks[1] != 'result' or ftks[3] != host or int(ftks[4]) != sec:
+        continue
+      else:
+        core_id = int(ftks[2])
+        # STEP 1 preprocessing
+        self.analyze_sequential_read_write_preprocess(data_path,core_id,host,sec)
+        # STEP 2 get keams throughputs and cache size
+        self.analyze_sequential_read_write_kmeans_thp(data_path,core_id,host,sec)
+        self.analyze_sequential_read_write_cache_size(data_path,core_id,host,sec)
 
   def analyze_random_read(self,data_path,host,sec):
     """
@@ -275,7 +294,8 @@ class CPUMemPack(Pack):
     util.remote_exec(ssh, commands=['rm -rf %s' % remote_path, 'mkdir %s' % remote_path], verifiers=[None,None])
     self.upload_benchmark(ssh, remote_path)
     logger.debug("benchmark installed.")
-    # STEP 4: run experiments
+    # STEP 4: run experiments for single thread
+    ## 4.1-4.4 evaluate the single session results
     ## 4.1 Sequential Read and Write
     timestamp = self.run_sequential_read_write(ssh, hostname, remote_path, work_path, data_path)
     ## 4.2 analyze SRW
@@ -284,6 +304,9 @@ class CPUMemPack(Pack):
     self.run_random_read(ssh, hostname, timestamp, remote_path, work_path, data_path)
     ## 4.4 analyze RR
     self.analyze_random_read(data_path, hostname, timestamp)
+    # STEP 5: run experiments for all CPU cores
+    timestamp = self.run_sequential_read_write(ssh, hostname, remote_path, work_path, data_path, multicores=True)
+    # TODO: how to analyze for multiple CPU cores.
     # STEP 5: clean up
     ssh.close()
 
