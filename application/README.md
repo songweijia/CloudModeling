@@ -1,6 +1,6 @@
 CloudModel Application Benchmarks
 ============
-The application benchmarks will be performed using Ceph. The existing system will use a configuration with a single `ceph-admin` node, a single `ceph-mon1` monitor node, and 3 `ceph-osd{#}` nodes (i.e. `ceph-osd1`, `ceph-osd2`, and `ceph-osd3`).
+The application benchmarks will be performed using Ceph. The existing system will use a configuration with a single `ceph-admin` node, a single `ceph-mon1` monitor node, and 3 `ceph-osd{#}` nodes (i.e. `ceph-osd1`, `ceph-osd2`, and `ceph-osd3`). Email ssh88@cornell.edu for any questions.
 
 Fractus Installation (Ubuntu 14.04)
 ------------
