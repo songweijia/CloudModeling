@@ -30,7 +30,6 @@ echo "public network = $SUBNET" >> ceph.conf
 echo "[osd]" >> ceph.conf
 echo "filestore xattr use omap = true" >> ceph.conf
 
-ceph-deploy install ceph-osd1 ceph-osd2 ceph-osd3 ceph-mon1 ceph-admin
 ceph-deploy install $OSD_NODES $MONITOR_NODE $ADMIN_NODE 
 
 ceph-deploy mon create-initial
