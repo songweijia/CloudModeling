@@ -26,3 +26,10 @@ Next, run the `ceph-deploy2.sh` script. Again, it may be ideal if the commands a
 
 After these are run, make sure you run the following command on each of the OSD nodes AND the monitor node:
 `sudo chmod +r /etc/ceph/ceph.client.admin.keyring`
+
+AWS Installation (Ubuntu 14.04)
+------------
+For an AWS installation, the same steps as before can be followed. However, keep the following in mind, which have to be configured manually through the AWS web client:
+
+1. Enable a public IP, so you can SSH into the instance
+2. Make sure to make the security group configurable to be open to all. To test that this works, for example, you can try pinging `ceph-mon1` from `ceph-admin`. This may not work in the default configuration, even if `ceph-admin` can SSH into `ceph-mon1`.
