@@ -22,7 +22,7 @@ For each of these OSD nodes, run the following command:
 `sudo chown ceph:ceph /var/local/osd#`
 where `#` is as before.
 
-Next, run the `ceph-deploy2.sh` script. Again, it may be ideal if the commands are run independently rather than on a script.
+Next, go to the `cluster` directory and run the `ceph-deploy2.sh` script. Again, it may be ideal if the commands are run independently rather than on a script.
 
 After these are run, make sure you run the following command on each of the OSD nodes AND the monitor node:
 `sudo chmod +r /etc/ceph/ceph.client.admin.keyring`
