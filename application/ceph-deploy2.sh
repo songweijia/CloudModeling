@@ -17,13 +17,13 @@ NUM_OSD=$(($# - 2))
 for i in `seq 1 $NUM_OSD`;
 do
     # TODO: This is not parametrized, it assumed the OSD names are ceph-osd#
-    ceph deploy osd prepare ceph-osd"$i":/var/local/osd"$i"
+    ceph-deploy osd prepare ceph-osd"$i":/var/local/osd"$i"
 done
 
 for i in `seq 1 $NUM_OSD`;
 do
     # TODO: This is not parametrized, it assumed the OSD names are ceph-osd#
-    ceph deploy osd activate ceph-osd"$i":/var/local/osd"$i"
+    ceph-deploy osd activate ceph-osd"$i":/var/local/osd"$i"
 done
 
 ceph-deploy admin $ADMIN_NODE $MONITOR_NODE $OSD_NODES
