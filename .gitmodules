@@ -1,0 +1,3 @@
+[submodule "benchmark/fastcloudmodel/data/buffer_size/kmeans"]
+	path = benchmark/fastcloudmodel/data/buffer_size/kmeans
+	url = https://github.com/marcoscastro/kmeans.git
