@@ -1,0 +1,28 @@
+format:
+
+- inaccuracy when using cloudmodel
+
+apps:
+========
+kmeans
+SGD
+SVD
+pagerank
+canopy
+PCA
+ALS
+RF
+naive bayes
+logistic regression
+
+inaccuracy: 
+1.41
+1.65
+1.89
+2.01
+1.15
+1.23
+1.56
+1.67
+1.31
+1.28
