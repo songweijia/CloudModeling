@@ -24,9 +24,9 @@ extern volatile int32_t sequential_throughput(
   size_t buffer_size,
   uint32_t num_iter,
   double * results,
-  uint32_t is_write = 0,
-  uint64_t bytes_per_iter = (1ull << 28),
-  uint64_t num_iter_warmup = 5,
-  size_t buf_alignment = (1ull << 12));
+  const uint32_t is_write = 0,
+  const uint64_t bytes_per_iter = (1ull << 28),
+  const uint64_t num_iter_warmup = 5,
+  const size_t buf_alignment = (1ull << 12));
 
 #endif//SEQ_THP

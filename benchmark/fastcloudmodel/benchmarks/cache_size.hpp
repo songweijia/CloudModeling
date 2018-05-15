@@ -19,8 +19,12 @@
  *        shows where estimation of cache size will be to get this throughput:
  *        20 + 10*i/(num_samples+1) GBps throughput. Defaulted to 1.
  * @param is_write - true, if upper_thp_GBps/lower_thp_GBps is write throughput
- *                   False, otherwise.
+ *        False, otherwise.
  * @param search_depth - how many iterations through the binary search.
+ * @param num_iter_per_sample - how many iteration for each data points we will
+ *        run.
+ * @param num_bytes_per_iter - how many bytes to scan, this will be passed to
+ *        sequential_throughput() in bytes_per_iter. Default to 256MB.
  * @return 0 for success, otherwise failure
  */
 extern int eval_cache_size(
@@ -30,6 +34,8 @@ extern int eval_cache_size(
   uint32_t * css,
   const int num_samples = 1,
   const bool is_write = true,
-  const int32_t search_depth = 10);
+  const int32_t search_depth = 10,
+  const uint32_t num_iter_per_sample = 5,
+  const uint64_t num_bytes_per_iter = (1ull << 28));
 
 #endif//__CACHE_SIZE_HPP_
