@@ -64,12 +64,15 @@ def draw_sensi():
   mks = ['o','x','v','+','s','*','D','^','|','3']
   ls = ['|',',','--','-',':']
   nser = 1
-  X = range(len(dat[:,0]))
+  X = np.array(range(len(dat[:,0])))
   X_ticklabels = [nsec2str(x) for x in dat[:,0]]
   for app in apps:
     plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],marker=mks[nser-1])
     nser = nser + 1
   ax = plt.gca()
+  ax2 = ax.twinx()
+  ax2.bar(X - 0.15,(1.0*100)/dat[:,0],0.3,color="white",label="CloudModel Overhead");
+  ax2.legend(framealpha=0.5,frameon=False,loc="lower right",numpoints=1)
   # lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1,bbox_to_anchor=(0,1.02,1,0.4))
   lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1)
   ax.set_xlim(-1,len(X))
@@ -78,11 +81,13 @@ def draw_sensi():
   ax.set_xticklabels(X_ticklabels)
   ax.set_ylim(0,90)
   ax.set_ylabel("Execution Time (Min)")
-  ax.arrow(4,10,0,-8,head_width=0.2,head_length=1.5)
-  ax.text(4.2,8,"best interval")
+  ax.arrow(4,10,0,-5,head_width=0.2,head_length=1.5,zorder=10)
+  ax.text(4.2,8,"best interval",zorder=10)
+  ax2.set_ylim(0,100)
+  ax2.set_ylabel("CloudModel Overhead(%)")
   # set figure size
   fig = plt.gcf()
-  fig.set_size_inches(7, 5)
+  fig.set_size_inches(7.5, 5)
   fig.tight_layout()
   plt.savefig('sensi.pdf',bbox_extra_artists=(lgd,), bbox_inches='tight')
   plt.show()
