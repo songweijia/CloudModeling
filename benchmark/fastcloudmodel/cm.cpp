@@ -50,27 +50,33 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
         num_iter,res,0,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
-  printf("READ %.3f GByte/sec std %.3f\n", average(num_iter,res), deviation(num_iter,res));
+  printf("READ %.3f GByte/sec std %.3f min %.3f max %.3f\n",
+    average(num_iter,res), deviation(num_iter,res),
+    minimum(num_iter,res), maximum(num_iter,res));
 
   // write 
   if (sequential_throughput(NULL,((size_t)buffer_size_kb)<<10,
         num_iter,res,1,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
-  printf("WRITE %.3f GByte/sec std %.3f\n", average(num_iter,res), deviation(num_iter,res));
+  printf("WRITE %.3f GByte/sec std %.3f min %.3f max %.3f\n",
+    average(num_iter,res), deviation(num_iter,res),
+    minimum(num_iter,res), maximum(num_iter,res));
 }
 
 int do_cachesize(const uint32_t cache_size_hint_KB,
   const double upper_thp_GBps,
   const double lower_thp_GBps,
-  const int num_data_points) {
+  const int num_data_points,
+  const int batch_size,
+  const bool is_write) {
 
   uint32_t css[num_data_points];
   assert (upper_thp_GBps > 0.0);
   assert (lower_thp_GBps > 0.0);
   assert (num_data_points > 0);
 
-  int ret = eval_cache_size(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,css,num_data_points);
+  int ret = eval_cache_size(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,css,num_data_points,is_write,11,5,((uint64_t)batch_size) << 20);
   if(ret) {
     fprintf(stderr,"failed...\n");
     return ret;
@@ -148,7 +154,7 @@ int main(int argc, char **argv) {
     break;
 
   case EXP_CACHESIZE:
-    do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints);
+    do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true);
     break;
 
   case EXP_LATENCY:

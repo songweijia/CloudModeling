@@ -34,6 +34,22 @@ inline double deviation(int n,double * res) {
   return sqrt(sum/(n-1));
 }
 
+inline double minimum(int n,double *res) {
+  double min = res[0];
+  for(int i=1;i<n;i++)
+    if (min > res[i])
+      min = res[i];
+  return min;
+}
+
+inline double maximum(int n,double *res) {
+  double max = res[0];
+  for(int i=1;i<n;i++)
+    if (max < res[i])
+      max = res[i];
+  return max;
+}
+
 inline void boost_cpu() {
   volatile double x = 172612534.3743657287f;
   volatile double y = 237846834.2835876175f;

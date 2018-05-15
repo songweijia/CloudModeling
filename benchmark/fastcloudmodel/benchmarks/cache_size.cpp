@@ -15,6 +15,8 @@ static int32_t binary_search (
   const int32_t search_depth,
   void * workspace, // a memory workspace with MEM_ALLOCATION 256MB.
   uint32_t *output,
+  const int32_t num_iter_per_sample,
+  const uint64_t num_bytes_per_iter,
   const uint32_t LB = 0ul,
   const uint32_t UB = 0ul) {
 
@@ -37,7 +39,8 @@ static int32_t binary_search (
 
   while(loop --) {
     size_t buffer_size = ((size_t)pivot)<<10;
-    ret = sequential_throughput(workspace,buffer_size,NUM_ITER_PER_DP,thps,is_write);
+    ret = sequential_throughput(workspace,buffer_size,
+      num_iter_per_sample,thps,is_write,num_bytes_per_iter);
     RETURN_ON_ERROR(ret,"sequential_throughput");
     double v = average(NUM_ITER_PER_DP,thps);
     uint32_t new_pivot = pivot;
@@ -65,7 +68,8 @@ static int32_t binary_search (
   uint32_t nub = pivot;
   ret = binary_search(npivot,
     target_thps + nofst,nlen,is_write,
-    search_depth-1,workspace,output+nofst,nlb,nub);
+    search_depth-1,workspace,output+nofst,
+    num_iter_per_sample,num_bytes_per_iter,nlb,nub);
   RETURN_ON_ERROR(ret,"binary_search, upper half");
   npivot = UB?(pivot+UB)/2:2*pivot;
   nofst = num_samples/2+1;
@@ -74,7 +78,8 @@ static int32_t binary_search (
   nub = ub;
   ret = binary_search(npivot,
     target_thps + nofst,nlen,is_write,
-    search_depth-1,workspace,output+nofst,nlb,nub);
+    search_depth-1,workspace,output+nofst,
+    num_iter_per_sample,num_bytes_per_iter,nlb,nub);
   RETURN_ON_ERROR(ret,"binary_search, lower half");
   
   return ret;
@@ -87,7 +92,10 @@ int eval_cache_size(
   uint32_t * css,
   const int num_samples,
   const bool is_write,
-  const int32_t search_depth) {
+  const int32_t search_depth,
+  const uint32_t num_iter_per_sample,
+  const uint64_t num_bytes_per_iter
+  ) {
 
   int i,ret;
   void *ws;
@@ -101,7 +109,7 @@ int eval_cache_size(
   double thps[num_samples];
   for(i=0;i<num_samples;i++)
     thps[i] = upper_thp_GBps - (upper_thp_GBps - lower_thp_GBps) * (i + 1) / (num_samples + 1);
-  ret = binary_search (cache_size_hint_KB, thps, num_samples, is_write, search_depth, ws, css);
+  ret = binary_search (cache_size_hint_KB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
   RETURN_ON_ERROR(ret,"binary_search");
 
   free (ws);
