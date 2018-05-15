@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 intro_data="intro_exp.dat"
 inacc_data="inaccuracy.dat"
+sensi_data="sensitivity.dat"
 apps = ['kmeans','SGD','SVD','pagerank','canopy','PCA','ALS','RF','naive bayes','logistic regression']
 
 def get_intro_data():
@@ -50,9 +51,43 @@ def draw_intro():
   fig.set_size_inches(7, 4.5)
   plt.tight_layout()
   plt.savefig("intro.pdf")
-  plt.show()
+  plt.close()
 
+def nsec2str(nsec):
+  if nsec < 60:
+    return "%ds" % nsec
+  else:
+    return "%dm" % (nsec/60)
+
+def draw_sensi():
+  dat = np.loadtxt(sensi_data)
+  mks = ['o','x','v','+','s','*','D','^','|','3']
+  ls = ['|',',','--','-',':']
+  nser = 1
+  X = range(len(dat[:,0]))
+  X_ticklabels = [nsec2str(x) for x in dat[:,0]]
+  for app in apps:
+    plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],marker=mks[nser-1])
+    nser = nser + 1
+  ax = plt.gca()
+  # lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1,bbox_to_anchor=(0,1.02,1,0.4))
+  lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1)
+  ax.set_xlim(-1,len(X))
+  ax.set_xlabel("Profiling Internal")
+  ax.set_xticks(X)
+  ax.set_xticklabels(X_ticklabels)
+  ax.set_ylim(0,90)
+  ax.set_ylabel("Execution Time (Min)")
+  ax.arrow(4,10,0,-8,head_width=0.2,head_length=1.5)
+  ax.text(4.2,8,"best interval")
+  # set figure size
+  fig = plt.gcf()
+  fig.set_size_inches(7, 5)
+  fig.tight_layout()
+  plt.savefig('sensi.pdf',bbox_extra_artists=(lgd,), bbox_inches='tight')
+  plt.show()
 
 if __name__ == '__main__':
   draw_intro()
+  draw_sensi()
 
