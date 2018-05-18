@@ -76,7 +76,7 @@ def draw_sensi():
   # lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1,bbox_to_anchor=(0,1.02,1,0.4))
   lgd = ax.legend(framealpha=0.5,frameon=False,loc="upper center",ncol=3,numpoints=1)
   ax.set_xlim(-1,len(X))
-  ax.set_xlabel("Profiling Internal")
+  ax.set_xlabel("Sampling Interval")
   ax.set_xticks(X)
   ax.set_xticklabels(X_ticklabels)
   ax.set_ylim(0,90)
