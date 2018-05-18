@@ -70,7 +70,7 @@ def draw_sensi():
   X = np.array(range(len(dat[:,0])))
   X_ticklabels = [nsec2str(x) for x in dat[:,0]]
   for app in apps:
-    plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],color=gp[nser],marker=mks[nser-1])
+    plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],color=gp[nser-1],marker=mks[nser-1])
     nser = nser + 1
   ax = plt.gca()
   ax2 = ax.twinx()
