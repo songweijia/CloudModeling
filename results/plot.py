@@ -3,7 +3,9 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import imp
 
+palette = imp.load_source('palette','palette.py')
 intro_data="intro_exp.dat"
 inacc_data="inaccuracy.dat"
 sensi_data="sensitivity.dat"
@@ -27,9 +29,9 @@ def draw_intro():
   dat = get_intro_data()
   inacc_dat = get_accuracy_data()
   # y1
-  unlimit = plt.bar(ind-width,dat[:,0],width,label="unlimited cache",color="#CCCC00")
-  limit   = plt.bar(ind      ,dat[:,1],width,label="limited cache",color="#CC0000",hatch='/')
-  limitcm = plt.bar(ind+width,dat[:,2],width,label="limited cache with CloudModel",color="#0000CC",hatch='x')
+  unlimit = plt.bar(ind-width,dat[:,0],width,label="unlimited cache",color=palette.palette[0])
+  limit   = plt.bar(ind      ,dat[:,1],width,label="limited cache",color=palette.palette[1],hatch='/')
+  limitcm = plt.bar(ind+width,dat[:,2],width,label="limited cache with CloudModel",color=palette.palette[2],hatch='x')
   ax1 = plt.gca()
   ax1.set_xticks(ind)
   ax1.set_xticklabels(apps)
@@ -63,11 +65,12 @@ def draw_sensi():
   dat = np.loadtxt(sensi_data)
   mks = ['o','x','v','+','s','*','D','^','|','3']
   ls = ['|',',','--','-',':']
+  gp = palette.get_gradient_palette(len(apps))
   nser = 1
   X = np.array(range(len(dat[:,0])))
   X_ticklabels = [nsec2str(x) for x in dat[:,0]]
   for app in apps:
-    plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],marker=mks[nser-1])
+    plt.plot(X,dat[:,nser],label=apps[nser-1],ls=ls[nser%len(ls)],color=gp[nser],marker=mks[nser-1])
     nser = nser + 1
   ax = plt.gca()
   ax2 = ax.twinx()
