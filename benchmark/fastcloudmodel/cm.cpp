@@ -18,6 +18,8 @@
  "--(u)pper_thp_GBps <20.00>\n" \
  "--(l)ower_thp_GBps <10.00>\n" \
  "--(c)ache_size_hint_KB <20480>\n" \
+ "--search_(d)epth <11>\n" \
+ "--(N)um_of_thp_dps_per_binary_search <5>\n" \
  "--(h)elp\n"
 
 const struct option opts[] = {
@@ -29,6 +31,8 @@ const struct option opts[] = {
   {"upper_thp_GBps",    required_argument,      0, 'u'},
   {"lower_thp_GBps",    required_argument,      0, 'l'},
   {"cache_size_hint_KB",required_argument,      0, 'c'},
+  {"search_depth",      required_argument,      0, 'd'},
+  {"Num_of_thp_dps_per_binary_search", required_argument, 0, 'N'},
   {0,0,0,0}
 };
 
@@ -69,14 +73,16 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
   const double lower_thp_GBps,
   const int num_data_points,
   const int batch_size,
-  const bool is_write) {
+  const bool is_write,
+  const int32_t search_depth,
+  const int32_t num_of_thp_dps_per_binary_search) {
 
   uint32_t css[num_data_points];
   assert (upper_thp_GBps > 0.0);
   assert (lower_thp_GBps > 0.0);
   assert (num_data_points > 0);
 
-  int ret = eval_cache_size(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,css,num_data_points,is_write,11,5,((uint64_t)batch_size) << 20);
+  int ret = eval_cache_size(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,css,num_data_points,is_write,search_depth,num_of_thp_dps_per_binary_search,((uint64_t)batch_size) << 20);
   if(ret) {
     fprintf(stderr,"failed...\n");
     return ret;
@@ -97,9 +103,11 @@ int main(int argc, char **argv) {
   double upper_thp_GBps = 0.0f;
   double lower_thp_GBps = 0.0f;
   uint32_t cache_size_hint_KB = 10240;
+  int32_t search_depth = 11;
+  int32_t num_of_thp_dps_per_binary_search = 5;
   // parse arguments.
   while(1) {
-    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:h", opts, &option_index);
+    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:h", opts, &option_index);
     if (c == -1)
       break;
 
@@ -139,6 +147,14 @@ int main(int argc, char **argv) {
       cache_size_hint_KB = (uint32_t)atoi(optarg);
       break;
 
+    case 'd':
+      search_depth = (int32_t)atoi(optarg);
+      break;
+
+    case 'N':
+      num_of_thp_dps_per_binary_search = (int32_t)atoi(optarg);
+      break;
+
     default:
       printf("skip unknown opt code:0%o ??\n",c);
     }
@@ -154,7 +170,7 @@ int main(int argc, char **argv) {
     break;
 
   case EXP_CACHESIZE:
-    do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true);
+    do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
     break;
 
   case EXP_LATENCY:

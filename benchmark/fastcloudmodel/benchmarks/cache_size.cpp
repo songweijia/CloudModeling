@@ -3,7 +3,6 @@
 #include "seq_thp.hpp"
 #include "util.hpp"
 
-#define NUM_ITER_PER_DP         (5)
 #define BUFFER_ALIGNMENT        (4096)
 #define MEM_ALLOCATION		(256ull << 20)
 
@@ -32,7 +31,7 @@ static int32_t binary_search (
 
   // search ...
   uint32_t pivot = seed_kb;
-  double thps[NUM_ITER_PER_DP];
+  double thps[num_iter_per_sample];
   uint32_t ret = 0;
 
   int loop = search_depth;
@@ -42,7 +41,7 @@ static int32_t binary_search (
     ret = sequential_throughput(workspace,buffer_size,
       num_iter_per_sample,thps,is_write,num_bytes_per_iter);
     RETURN_ON_ERROR(ret,"sequential_throughput");
-    double v = average(NUM_ITER_PER_DP,thps);
+    double v = average(num_iter_per_sample,thps);
     uint32_t new_pivot = pivot;
     if (v < target_thp) { // go smaller
       ub = pivot;
