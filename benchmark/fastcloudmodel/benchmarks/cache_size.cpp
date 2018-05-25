@@ -7,6 +7,10 @@
 #define MEM_ALLOCATION		(256ull << 20)
 
 static int32_t binary_search (
+#ifdef LOG_BINARY_SEARCH
+  int32_t *bs_log,
+  const int32_t tot_search_depth,
+#endif//LOG_BINARY_SEARCH
   const uint32_t seed_kb,
   const double * target_thps,
   const int num_samples,
@@ -35,7 +39,9 @@ static int32_t binary_search (
   uint32_t ret = 0;
 
   int loop = search_depth;
-
+#ifdef LOG_BINARY_SEARCH
+  bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
+#endif//LOG_BINARY_SEARCH
   while(loop --) {
     size_t buffer_size = ((size_t)pivot)<<10;
     ret = sequential_throughput(workspace,buffer_size,
@@ -55,6 +61,9 @@ static int32_t binary_search (
     }
     if (pivot == new_pivot) break;
     else pivot = new_pivot;
+#ifdef LOG_BINARY_SEARCH
+  bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
+#endif//LOG_BINARY_SEARCH
   }
 
   output[num_samples/2] = pivot;
@@ -65,17 +74,28 @@ static int32_t binary_search (
   uint32_t nlen = num_samples/2;
   uint32_t nlb = LB;
   uint32_t nub = pivot;
-  ret = binary_search(npivot,
+  ret = binary_search(
+#ifdef LOG_BINARY_SEARCH
+    bs_log,
+    tot_search_depth,
+#endif//LOG_BINARY_SEARCH
+    npivot,
     target_thps + nofst,nlen,is_write,
     search_depth-1,workspace,output+nofst,
     num_iter_per_sample,num_bytes_per_iter,nlb,nub);
   RETURN_ON_ERROR(ret,"binary_search, upper half");
+
   npivot = UB?(pivot+UB)/2:2*pivot;
   nofst = num_samples/2+1;
   nlen = num_samples-num_samples/2-1;
   nlb = pivot;
   nub = ub;
-  ret = binary_search(npivot,
+  ret = binary_search(
+#ifdef LOG_BINARY_SEARCH
+    bs_log,
+    tot_search_depth,
+#endif//LOG_BINARY_SEARCH
+    npivot,
     target_thps + nofst,nlen,is_write,
     search_depth-1,workspace,output+nofst,
     num_iter_per_sample,num_bytes_per_iter,nlb,nub);
@@ -108,8 +128,35 @@ int eval_cache_size(
   double thps[num_samples];
   for(i=0;i<num_samples;i++)
     thps[i] = upper_thp_GBps - (upper_thp_GBps - lower_thp_GBps) * (i + 1) / (num_samples + 1);
-  ret = binary_search (cache_size_hint_KB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
+
+#ifdef LOG_BINARY_SEARCH
+  const int num_log_entry = num_samples*(search_depth+1);
+  int32_t *bs_log = (int32_t*)malloc(num_log_entry*sizeof(int32_t));
+  if(bs_log == nullptr) {
+    fprintf(stderr, "failed to allocate log entry.\n");
+    return -1;
+  }
+  bzero((void*)bs_log,num_log_entry*sizeof(int32_t));
+#endif
+
+  ret = binary_search (
+#ifdef LOG_BINARY_SEARCH
+    bs_log,
+    search_depth,
+#endif//LOG_BINARY_SEARCH
+    cache_size_hint_KB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
   RETURN_ON_ERROR(ret,"binary_search");
+
+#ifdef LOG_BINARY_SEARCH
+  printf("search log:\n");
+  for (int i = 0; i < num_samples; i++)
+  {
+    printf("\t");
+    for (int j = 0; j <= search_depth; j++)
+      printf("%d,",bs_log[i*(search_depth+1)+j]);
+    printf("\n");
+  }
+#endif//LOG_BINARY_SEARCH
 
   free (ws);
 
