@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 
 #include "seq_thp.hpp"
 #include "cache_size.hpp"
@@ -20,6 +21,7 @@
  "--(c)ache_size_hint_KB <20480>\n" \
  "--search_(d)epth <11>\n" \
  "--(N)um_of_thp_dps_per_binary_search <5>\n" \
+ "--(L)oop <1> \n" \
  "--(h)elp\n"
 
 const struct option opts[] = {
@@ -32,6 +34,7 @@ const struct option opts[] = {
   {"lower_thp_GBps",    required_argument,      0, 'l'},
   {"cache_size_hint_KB",required_argument,      0, 'c'},
   {"search_depth",      required_argument,      0, 'd'},
+  {"Loop",              required_argument,      0, 'L'},
   {"Num_of_thp_dps_per_binary_search", required_argument, 0, 'N'},
   {0,0,0,0}
 };
@@ -42,6 +45,15 @@ enum CMExp {
   EXP_LATENCY = 2,
   EXP_CACHESIZE
 };
+
+static inline void print_timestamp() {
+  struct timespec tv;
+  if (clock_gettime(CLOCK_REALTIME,&tv) != 0){
+    fprintf(stderr, "clock_gettime() failed.\n");
+  } else {
+    fprintf(stdout, "%ld.%03ld \n", tv.tv_sec,tv.tv_nsec/1000000);
+  }
+}
 
 int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
   double *res = (double*)malloc(sizeof(double)*num_iter);
@@ -105,9 +117,10 @@ int main(int argc, char **argv) {
   uint32_t cache_size_hint_KB = 10240;
   int32_t search_depth = 11;
   int32_t num_of_thp_dps_per_binary_search = 5;
+  int nloop = 1;
   // parse arguments.
   while(1) {
-    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:h", opts, &option_index);
+    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:h", opts, &option_index);
     if (c == -1)
       break;
 
@@ -125,6 +138,10 @@ int main(int argc, char **argv) {
 
     case 's':
       buffer_size_kb = atoi(optarg);
+      break;
+
+    case 'L':
+      nloop = atoi(optarg);
       break;
 
     case 'n':
@@ -166,11 +183,15 @@ int main(int argc, char **argv) {
     break;
 
   case EXP_THROUGHPUT:
-    do_throughput(buffer_size_kb,num_datapoints,batch_size_mb);
+    while(nloop --)
+      do_throughput(buffer_size_kb,num_datapoints,batch_size_mb);
     break;
 
   case EXP_CACHESIZE:
-    do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
+    while(nloop --){
+      print_timestamp();
+      do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
+    }
     break;
 
   case EXP_LATENCY:
