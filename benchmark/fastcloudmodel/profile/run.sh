@@ -6,4 +6,5 @@ do
   mv profile.time profile.time.$i
   mv profile.thp profile.thp.$i
   mv profile.lat profile.lat.$i
+  mv profile.cs profile.cs.$i
 done

@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
   if len(sys.argv) < 3:
-    print "%s <data file> <cache level> [bin=0.1]" % sys.argv[0]
+    print "%s <data file> <cache level> [bin=0.15]" % sys.argv[0]
     exit(0)
   dat = np.loadtxt(sys.argv[1])
   cl = int(sys.argv[2])
-  binsize = 0.1
+  binsize = 0.15
   if len(sys.argv) >= 4:
     binsize = float(sys.argv[3])
   kernel = gaussian_kde(dat,bw_method=binsize)

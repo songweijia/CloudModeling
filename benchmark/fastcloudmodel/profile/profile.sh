@@ -36,9 +36,10 @@ CS=(`cat profile.thp`)
 for((i=0;i<${#CSH[@]};i++))
 do
   let l=$i+1
-  buffer_size=`sudo taskset -c ${CORE_ID} ../cm -e cachesize -S 128 -u ${CS[$i]} -l ${CS[$l]} -c ${CSH[$i]} -n 20 -N 10 | head -1 | awk '{print $2}' | sed 's/KB//'`
-  #test_buffer_size=`expr ${buffer_size} \* 9 \/ 10`
-  test_buffer_size=$buffer_size
+  buffer_size=`sudo taskset -c ${CORE_ID} ../cm -e cachesize -S 128 -u ${CS[$i]} -l ${CS[$l]} -c ${CSH[$i]} -n 1 -N 10 | head -1 | awk '{print $2}' | sed 's/KB//'`
+  test_buffer_size=`expr ${buffer_size} \* 9 \/ 10`
+  # echo ${buffer_size} >> profile.cs
+  # test_buffer_size=$buffer_size
   sudo taskset -c ${CORE_ID} ./rr_lat ${test_buffer_size} 20 | awk '{SUM+=$3} END {print SUM / NR " ns"}' >> profile.lat
 done
 
