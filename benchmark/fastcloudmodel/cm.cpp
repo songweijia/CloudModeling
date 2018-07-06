@@ -8,6 +8,7 @@
 
 #include "seq_thp.hpp"
 #include "cache_size.hpp"
+#include "rand_lat.hpp"
 #include "util.hpp"
 
 #define HELP_INFO \
@@ -105,6 +106,14 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
   return ret;
 }
 
+int do_latency(const int buffer_size_kb,
+  const int num_datapoints) {
+  double latencies[num_datapoints];
+  random_latency(((int64_t)buffer_size_kb<<10),num_datapoints,latencies);
+  for (int i;i<num_datapoints;i++)
+    fprintf(stdout, "%d KB -- %.3f ns\n", buffer_size_kb, latencies[i]);
+}
+
 int main(int argc, char **argv) {
   int c;
   int option_index = 0;
@@ -189,12 +198,16 @@ int main(int argc, char **argv) {
 
   case EXP_CACHESIZE:
     while(nloop --){
-      print_timestamp();
+      // print_timestamp();
       do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
     }
     break;
 
   case EXP_LATENCY:
+    while(nloop --){
+      do_latency(buffer_size_kb,num_datapoints);
+    }
+    break;
   default:
   // TODO:
     ;

@@ -5,6 +5,9 @@ else
   CORE_ID=0
 fi
 
+
+START_TIME=`date +%s`
+
 OUTPUT=raw.dat
 THPDAT=thp.dat
 
@@ -24,6 +27,7 @@ cat ${OUTPUT} | awk '{print $1}' >> ${THPDAT}
 # cat ${KMDAT} | kmeans/kmeans | grep ^Cluster\ values | awk '{print $3}' | sort -k 1 -n > profile.res
 ./kde.py ${THPDAT} ${#CSH[@]} > profile.thp
 
+THP_TIME=`date +%s`
 rm -rf ${THPDAT}
 
 # step 2 find cache size
@@ -41,3 +45,8 @@ done
 buffer_size=`sudo taskset -c ${CORE_ID} ../cm -e cachesize -S 128 -u ${CS[-2]} -l ${CS[-1]} -c ${CSH[-1]} -n 20 -N 10 | tail -1 | awk '{print $2}' | sed 's/KB//'`
 test_buffer_size=`expr ${buffer_size} \* 10`
 sudo taskset -c ${CORE_ID} ./rr_lat ${test_buffer_size} 20 | awk '{SUM+=$3} END {print SUM / NR " ns"}' >> profile.lat
+
+LAT_TIME=`date +%s`
+
+expr $THP_TIME - $START_TIME >> profile.time
+expr $LAT_TIME - $THP_TIME >> profile.time
