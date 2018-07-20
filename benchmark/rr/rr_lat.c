@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <sched.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 typedef struct bitmap{
 	uint64_t num_bits;			
@@ -88,11 +92,27 @@ uint64_t random_number(uint64_t min,uint64_t max, bitmap_t * map){
 	return x;		
 }
 
-uint64_t * random_arr(uint64_t size_kb){
+#define FILE_NAME "/mnt/huge/hugepagefile"
+#define ADDR (void *)(0x8000000000000000UL)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_SHARED)
+
+uint64_t * random_arr(int fd,uint64_t size_kb){
 	uint64_t memsize = (size_kb << 10);
 	uint64_t arr_size  = memsize / sizeof(uint64_t);
 	bitmap_t * arr_bitmap = bitmap_new(arr_size);
+
+        // use hugepage instead.
+#if 1
+        uint64_t *arr = (uint64_t *) mmap(ADDR, memsize, PROTECTION, FLAGS, fd, 0);
+        if (arr == MAP_FAILED) {
+          perror("mmap");
+          unlink(FILE_NAME);
+          exit(1);
+        }
+#else
 	uint64_t * arr = (uint64_t *) memalign(1024,memsize);
+#endif
 	time_t t;
 	
 	srand((unsigned) time(&t));
@@ -139,12 +159,29 @@ int main(int argc, char const *argv[])
 		printf("USAGE:%s <buffer size(KB)> <number of datapoints>\n", argv[0]);
 		return -1;
 	}
+
+	int max_pri = sched_get_priority_max(SCHED_FIFO);
+	struct sched_param sch_parm;
+ 	sch_parm.sched_priority = max_pri;
+	int ret = sched_setscheduler(0,SCHED_FIFO,&sch_parm);
+	if ( ret != 0){
+          printf("sched_setscheduler()\n");
+          return -1;
+        }
+
 	uint64_t size_kb = atoi(argv[1]); 	//size of memory in kb
         uint64_t num_points = (uint64_t)atol(argv[2]);
 	uint64_t size = size_kb << 10;		//size of memory in bytes
-
+#if 1
+        int fd = open(FILE_NAME, O_CREAT | O_RDWR, 0755);
+        if (fd < 0) {
+          perror("Open file failed");
+          exit(1);
+        }
+	uint64_t * arr = random_arr(fd,size_kb);
+#else
 	uint64_t * arr = random_arr(size_kb);
-
+#endif
 	register uint64_t i,j;
 //        register volatile uint64_t temp;
         register uint64_t temp;
@@ -160,7 +197,119 @@ int main(int argc, char const *argv[])
 		struct timespec t1,t2;
                 clock_gettime(CLOCK_REALTIME,&t1);
                 register int cnt;
-                for(cnt=0;cnt<1024;cnt+=16){
+                for(cnt=0;cnt<1048576;cnt+=128){
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
+		 temp = *((uint64_t *) temp);
 		 temp = *((uint64_t *) temp);
 		 temp = *((uint64_t *) temp);
 		 temp = *((uint64_t *) temp);
@@ -179,9 +328,15 @@ int main(int argc, char const *argv[])
 		 temp = *((uint64_t *) temp);
 		}
                 clock_gettime(CLOCK_REALTIME,&t2);
-                printf("%"PRIu64" KB %.2f ns\n",size_kb,((double)((t2.tv_sec-t1.tv_sec)*1000000000l+t2.tv_nsec-t1.tv_nsec)-clock_overhead)/1024);
+                printf("%"PRIu64" KB %.2f ns\n",size_kb,((double)((t2.tv_sec-t1.tv_sec)*1000000000l+t2.tv_nsec-t1.tv_nsec)-clock_overhead)/1048576);
         }
         x = temp;
+#if 1
+        munmap(arr,size_kb<<10);
+        close(fd);
+        unlink(FILE_NAME);
+#else
 	free(arr);
+#endif
 	return 0;
 }
