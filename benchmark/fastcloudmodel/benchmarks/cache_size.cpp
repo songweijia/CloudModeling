@@ -3,6 +3,12 @@
 #include "seq_thp.hpp"
 #include "util.hpp"
 
+#if USE_HUGEPAGE
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 #define BUFFER_ALIGNMENT        (4096)
 #define MEM_ALLOCATION		(256ull << 20)
 
@@ -120,8 +126,26 @@ int eval_cache_size(
   void *ws;
 
   boost_cpu();
+#if USE_HUGEPAGE
+#define FILE_NAME "/mnt/huge/hugepagefile"
+#define ADDR (void *)(0x8000000000000000UL)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_SHARED)
+  int fd = open(FILE_NAME, O_CREAT|O_RDWR, 0755);
+  if (fd < 0) {
+    perror("Open file failed. Is hugetlbfs mounted?");
+    exit(1);
+  }
+  ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, fd, 0);
+  if (ws == MAP_FAILED) {
+    perror("mmap");
+    unlink(FILE_NAME);
+    exit(1);
+  }
+#else
   ret = posix_memalign(&ws, BUFFER_ALIGNMENT, MEM_ALLOCATION);
   RETURN_ON_ERROR(ret,"posix_memalign()");
+#endif
 
   // printf("L3 Write Throughput: %.3f GB/s.\n", upper_thp_GBps);
   // printf("Memory Write Throughput: %.3f GB/s.\n",lower_thp_GBps);
@@ -158,7 +182,13 @@ int eval_cache_size(
   }
 #endif//LOG_BINARY_SEARCH
 
+#if USE_HUGEPAGE
+  munmap(ws,MEM_ALLOCATION);
+  close(fd);
+  unlink(FILE_NAME);
+#else
   free (ws);
+#endif
 
   return ret;
 }

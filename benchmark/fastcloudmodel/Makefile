@@ -1,5 +1,5 @@
-CFLAGS=-I. -Ibenchmarks -O3
-CPPFLAGS=-I. -Ibenchmarks -O3 --std=c++11
+CFLAGS=-I. -Ibenchmarks -O3 -DUSE_HUGEPAGE
+CPPFLAGS=-I. -Ibenchmarks -O3 --std=c++11 -DUSE_HUGEPAGE
 # CPPFLAGS=-I. -Ibenchmarks -O0 -ggdb --std=c++11 -DLOG_BINARY_SEARCH
 # CPPFLAGS=-I. -Ibenchmarks -O0 -ggdb --std=c++11
 LDFLAGS=

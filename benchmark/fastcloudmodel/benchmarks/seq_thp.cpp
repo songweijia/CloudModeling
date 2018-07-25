@@ -6,6 +6,19 @@
 #include "seq_thp.hpp"
 #include "util.hpp"
 
+#if USE_HUGEPAGE
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define FILE_NAME "/mnt/huge/hugepagefile"
+#define ADDR (void *)(0x8000000000000000UL)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_SHARED)
+#endif
+
+
+
 extern int32_t volatile sequential_throughput(
   void * buffer,
   size_t buffer_size,
@@ -24,9 +37,26 @@ extern int32_t volatile sequential_throughput(
 
   // STEP 1 - validate/allocate the buffer
   void * buf = buffer;
+#ifdef USE_HUGEPAGE
+  int fd = -1;
+#endif
   if (buf == NULL) {
+#if USE_HUGEPAGE
+    fd = open(FILE_NAME, O_CREAT|O_RDWR, 0755);
+    if (fd < 0) {
+      perror("Open file failed. Is hugetlbfs mounted?");
+      exit(1);
+    }
+    buf = mmap(ADDR, buffer_size, PROTECTION, FLAGS, fd, 0);
+    if (buf == MAP_FAILED) {
+      perror("mmap");
+      unlink(FILE_NAME);
+      exit(1);
+    }
+#else
     ret = posix_memalign(&buf,buf_alignment, buffer_size);
     RETURN_ON_ERROR(ret,"posix_memalign.");
+#endif
   }
 
   // STEP 2 - change scheduler
@@ -458,8 +488,15 @@ extern int32_t volatile sequential_throughput(
   }
 
   // STEP 8 - clean up
-  if (!buffer)
+  if (!buffer){
+#if USE_HUGEPAGE
+    munmap(buf,buffer_size);
+    close(fd);
+    unlink(FILE_NAME);
+#else
     free(buf);
+#endif
+  }
 
   return 0;
 }
