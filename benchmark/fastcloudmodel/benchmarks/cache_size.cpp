@@ -48,30 +48,32 @@ static int32_t binary_search (
 #ifdef LOG_BINARY_SEARCH
   bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
 #endif//LOG_BINARY_SEARCH
-  while(loop --) {
-    size_t buffer_size = ((size_t)pivot)<<10;
-    ret = sequential_throughput(workspace,buffer_size,
-      num_iter_per_sample,thps,is_write,num_bytes_per_iter);
-    RETURN_ON_ERROR(ret,"sequential_throughput");
-    double v = average(num_iter_per_sample,thps);
-    uint32_t new_pivot = pivot;
-    if (v < target_thp) { // go smaller
-      ub = pivot;
-      new_pivot = (ub + lb) / 2;
-    } else { // go bigger
-      lb = pivot;
-      if (ub == 0)
-        new_pivot = pivot << 1;
-      else
+  if (pivot != 0) {
+    while(loop --) {
+      size_t buffer_size = ((size_t)pivot)<<10;
+      ret = sequential_throughput(workspace,buffer_size,
+        num_iter_per_sample,thps,is_write,num_bytes_per_iter);
+      RETURN_ON_ERROR(ret,"sequential_throughput");
+      double v = average(num_iter_per_sample,thps);
+      uint32_t new_pivot = pivot;
+      if (v < target_thp) { // go smaller
+        ub = pivot;
         new_pivot = (ub + lb) / 2;
+      } else { // go bigger
+        lb = pivot;
+        if (ub == 0)
+          new_pivot = pivot << 1;
+        else
+          new_pivot = (ub + lb) / 2;
+      }
+      if (new_pivot == 0) break;
+      if (pivot == new_pivot) break;
+      else pivot = new_pivot;
+  #ifdef LOG_BINARY_SEARCH
+    bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
+  #endif//LOG_BINARY_SEARCH
     }
-    if (pivot == new_pivot) break;
-    else pivot = new_pivot;
-#ifdef LOG_BINARY_SEARCH
-  bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
-#endif//LOG_BINARY_SEARCH
   }
-
   output[num_samples/2] = pivot;
 
   // search others

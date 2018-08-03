@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
 
   case EXP_CACHESIZE:
     while(nloop --){
-      // print_timestamp();
+      print_timestamp();
       do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
     }
     break;
