@@ -71,7 +71,7 @@ int do_thpmonitor(int buffer_size_kb, double threshold) {
   sch_parm.sched_priority = max_pri;
   int ret = sched_setscheduler(0,SCHED_FIFO,&sch_parm);
   RETURN_ON_ERROR(ret,"sched_setscheduler.");
-  if (posix_memalign(&buffer,4096,buffer_size_kb) !=0 ) {
+  if (posix_memalign(&buffer,4096,((size_t)buffer_size_kb)<<10) !=0 ) {
     fprintf(stderr, "fail to call posix_memalign.");
     return -1;
   }
