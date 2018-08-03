@@ -60,13 +60,14 @@ extern int32_t volatile sequential_throughput(
   }
 
   // STEP 2 - change scheduler
+#if 0
   int max_pri = sched_get_priority_max(SCHED_FIFO);
   RETURN_ON_ERROR(max_pri,"sched_get_priority_max.");
   struct sched_param sch_parm;
   sch_parm.sched_priority = max_pri;
   ret = sched_setscheduler(0,SCHED_FIFO,&sch_parm);
   RETURN_ON_ERROR(ret,"sched_setscheduler.");
-
+#endif
   // STEP 3 - warm up
   while (num_iter_warmup --) {
     for (size_t i=0;i<(buffer_size>>3);i++) {

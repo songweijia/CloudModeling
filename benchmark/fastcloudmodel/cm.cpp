@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <sched.h>
+#include <fcntl.h>
 
 #include "seq_thp.hpp"
 #include "cache_size.hpp"
@@ -13,7 +15,7 @@
 
 #define HELP_INFO \
  "cloudmodel benchmark\n" \
- "--(e)xperiment throughput|latency|cachesize\n" \
+ "--(e)xperiment throughput|latency|cachesize|thpmonitor\n" \
  "--buffer_(s)ize <size in KB>\n" \
  "--(n)um_of_datapoints <num>\n" \
  "--batch_(S)ize <size in MB>\n" \
@@ -23,6 +25,7 @@
  "--search_(d)epth <11>\n" \
  "--(N)um_of_thp_dps_per_binary_search <5>\n" \
  "--(L)oop <1> \n" \
+ "--(t)hroughpu_threshold \n" \
  "--(h)elp\n"
 
 const struct option opts[] = {
@@ -35,6 +38,7 @@ const struct option opts[] = {
   {"lower_thp_GBps",    required_argument,      0, 'l'},
   {"cache_size_hint_KB",required_argument,      0, 'c'},
   {"search_depth",      required_argument,      0, 'd'},
+  {"throughput_threshold", required_argument,   0,  't'},
   {"Loop",              required_argument,      0, 'L'},
   {"Num_of_thp_dps_per_binary_search", required_argument, 0, 'N'},
   {0,0,0,0}
@@ -44,7 +48,8 @@ enum CMExp {
   EXP_HELP = 0,
   EXP_THROUGHPUT = 1,
   EXP_LATENCY = 2,
-  EXP_CACHESIZE
+  EXP_CACHESIZE = 3,
+  EXP_THPMONITOR = 4
 };
 
 static inline void print_timestamp() {
@@ -53,6 +58,34 @@ static inline void print_timestamp() {
     fprintf(stderr, "clock_gettime() failed.\n");
   } else {
     fprintf(stdout, "%ld.%03ld \n", tv.tv_sec,tv.tv_nsec/1000000);
+  }
+}
+
+int do_thpmonitor(int buffer_size_kb, double threshold) {
+  void *buffer = nullptr;
+  double thp;
+
+  int max_pri = sched_get_priority_max(SCHED_FIFO);
+  RETURN_ON_ERROR(max_pri,"sched_get_priority_max.");
+  struct sched_param sch_parm;
+  sch_parm.sched_priority = max_pri;
+  int ret = sched_setscheduler(0,SCHED_FIFO,&sch_parm);
+  RETURN_ON_ERROR(ret,"sched_setscheduler.");
+  if (posix_memalign(&buffer,4096,buffer_size_kb) !=0 ) {
+    fprintf(stderr, "fail to call posix_memalign.");
+    return -1;
+  }
+
+  boost_cpu();
+  while(1) {
+    if (sequential_throughput(buffer,((size_t)buffer_size_kb)<<10,
+      1,&thp,0,((size_t)buffer_size_kb)<<10,0)) {
+      fprintf(stderr, "experiment failed...\n");
+    }
+    if (thp < threshold) {
+      print_timestamp();
+      fprintf(stdout,"thp = %.2f GByte/sec\n",thp);
+    }
   }
 }
 
@@ -127,9 +160,10 @@ int main(int argc, char **argv) {
   int32_t search_depth = 11;
   int32_t num_of_thp_dps_per_binary_search = 5;
   int nloop = 1;
+  double throughput_threshold = 0.0f;
   // parse arguments.
   while(1) {
-    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:h", opts, &option_index);
+    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:t:h", opts, &option_index);
     if (c == -1)
       break;
 
@@ -141,6 +175,8 @@ int main(int argc, char **argv) {
         exp = EXP_LATENCY;
       else if (strcmp(optarg,"cachesize") == 0)
         exp = EXP_CACHESIZE;
+      else if (strcmp(optarg,"thpmonitor") == 0)
+        exp = EXP_THPMONITOR;
       else
         exp = EXP_HELP;
       break;
@@ -181,6 +217,10 @@ int main(int argc, char **argv) {
       num_of_thp_dps_per_binary_search = (int32_t)atoi(optarg);
       break;
 
+    case 't':
+      throughput_threshold = atof(optarg);
+      break;
+
     default:
       printf("skip unknown opt code:0%o ??\n",c);
     }
@@ -208,6 +248,11 @@ int main(int argc, char **argv) {
       do_latency(buffer_size_kb,num_datapoints);
     }
     break;
+
+  case EXP_THPMONITOR:
+    do_thpmonitor(buffer_size_kb,throughput_threshold);
+    break;
+
   default:
   // TODO:
     ;
