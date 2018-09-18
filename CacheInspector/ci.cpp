@@ -12,7 +12,7 @@
 #include "util.hpp"
 
 #define HELP_INFO \
- "cloudmodel benchmark\n" \
+ "CacheInspector benchmark\n" \
  "--(e)xperiment throughput|latency|cachesize\n" \
  "--buffer_(s)ize <size in KB>\n" \
  "--(n)um_of_datapoints <num>\n" \
@@ -108,10 +108,11 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
 
 int do_latency(const int buffer_size_kb,
   const int num_datapoints) {
-  double latencies[num_datapoints];
+  double *latencies = (double*)malloc(sizeof(double)*num_datapoints);
   random_latency(((int64_t)buffer_size_kb<<10),num_datapoints,latencies);
   for (int i;i<num_datapoints;i++)
     fprintf(stdout, "%d KB -- %.3f ns\n", buffer_size_kb, latencies[i]);
+  free((void*)latencies);
 }
 
 int main(int argc, char **argv) {
@@ -192,24 +193,41 @@ int main(int argc, char **argv) {
     break;
 
   case EXP_THROUGHPUT:
+    fprintf(stderr,"=== Throughput Test ===\n");
+    fprintf(stderr,"nloop:\t%d\n",nloop);
+    fprintf(stderr,"buffer_size_kb:\t%d\n",buffer_size_kb);
+    fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
+    fprintf(stderr,"batch_size_mb:\t%d\n",batch_size_mb);
     while(nloop --)
       do_throughput(buffer_size_kb,num_datapoints,batch_size_mb);
     break;
 
   case EXP_CACHESIZE:
+    fprintf(stderr,"=== Cache Size Test ===\n");
+    fprintf(stderr,"nloop:\t%d\n",nloop);
+    fprintf(stderr,"cache_size_hint_KB:\t%d\n",cache_size_hint_KB);
+    fprintf(stderr,"upper_thp_GBps:\t%f\n",upper_thp_GBps);
+    fprintf(stderr,"lower_thp_GBps:\t%f\n",lower_thp_GBps);
+    fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
+    fprintf(stderr,"batch_size_mb:\t%d\n",batch_size_mb);
+    fprintf(stderr,"search_depth:\t%d\n",search_depth);
+    fprintf(stderr,"num_of_thp_dps_per_binary_search:\t%d\n",num_of_thp_dps_per_binary_search);
     while(nloop --){
-      print_timestamp();
+      // print_timestamp();
       do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
     }
     break;
 
   case EXP_LATENCY:
+    fprintf(stderr,"=== Latency Test ===\n");
+    fprintf(stderr,"nloop:\t%d\n",nloop);
+    fprintf(stderr,"buffer_size_kb:\t%d\n",buffer_size_kb);
+    fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
     while(nloop --){
       do_latency(buffer_size_kb,num_datapoints);
     }
     break;
   default:
-  // TODO:
     ;
   }
 

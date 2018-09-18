@@ -4,9 +4,9 @@ CPPFLAGS=-I. -Ibenchmarks -O3 --std=c++11 -DUSE_HUGEPAGE
 # CPPFLAGS=-I. -Ibenchmarks -O0 -ggdb --std=c++11
 LDFLAGS=
 LDLIBS=
-SRCS=cm.cpp benchmarks/seq_thp.cpp benchmarks/cache_size.cpp benchmarks/rand_lat.cpp
+SRCS=ci.cpp benchmarks/seq_thp.cpp benchmarks/cache_size.cpp benchmarks/rand_lat.cpp
 HEADERS=benchmarks/seq_thp.hpp util.hpp
-PROGS=cm
+PROGS=ci
 
 all: $(PROGS) 
 

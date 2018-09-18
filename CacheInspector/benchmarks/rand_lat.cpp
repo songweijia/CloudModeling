@@ -239,7 +239,7 @@ void random_latency(int64_t buffer_size,int num_points,double *output) {
   // STEP 4 - test
   #define NUMBER_OF_ACCESS (16<<10)
   for(int i=0;i<num_points;i++)
-    output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS,cll+i)/NUMBER_OF_ACCESS;
+    output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS,cll+(i%num_entries))/NUMBER_OF_ACCESS;
 
   // STEP 5 - clean up
   free(cll);
