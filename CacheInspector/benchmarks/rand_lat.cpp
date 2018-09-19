@@ -11,13 +11,32 @@
 #include <stdlib.h>
 #include "rand_lat.hpp"
 
+static uint64_t rx=123456789L;
+static uint64_t ry=362436069L;
+static uint64_t rz=521288629L;
+
+static uint64_t xorshf96() {
+  rx ^= rx << 16;
+  rx ^= rx >> 5;
+  rx ^= rx << 1;
+
+   uint64_t t = rx;
+   rx = ry;
+   ry = rz;
+   rz = t ^ rx ^ ry;
+
+  return rz;
+}
+
 static bool initialize_random_seed() {
   struct timespec ts;
   if (clock_gettime(CLOCK_REALTIME, &ts) < 0) {
     fprintf(stderr,"clock_gettime() failed.\n");
     return false;
   }
-  srand((unsigned int)ts.tv_nsec);
+  uint32_t nloop = ((uint32_t)ts.tv_nsec)&0xffff;
+  while(nloop--)
+    xorshf96();
   return true;
 }
 
@@ -33,12 +52,12 @@ static bool fill_cyclic_linked_list(uint64_t *cll, int64_t ecnt) {
     return false;
   }
 
-  int64_t head = rand()%ecnt;
+  int64_t head = xorshf96()%ecnt;
   int64_t offset = head;
   bytemap[offset] = 1;
   int64_t filled = 1;
   while(filled < ecnt) {
-    int64_t next = random()%ecnt;
+    int64_t next = xorshf96()%ecnt;
     while(bytemap[next]) next = (next+1)%ecnt;
     cll[offset] = (uint64_t)&cll[next];
     offset = next;
@@ -48,6 +67,8 @@ static bool fill_cyclic_linked_list(uint64_t *cll, int64_t ecnt) {
   cll[offset] = (uint64_t)&cll[head];
 
   free(bytemap);
+  printf("initialized...\n");
+
   return true;
 }
 

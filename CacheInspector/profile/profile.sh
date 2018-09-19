@@ -45,7 +45,7 @@ do
 done
 
 buffer_size=`sudo taskset -c ${CORE_ID} ../ci -e cachesize -S 128 -u ${CS[-2]} -l ${CS[-1]} -c ${CSH[-1]} -n 1 -N 10 | tail -1 | awk '{print $2}' | sed 's/KB//'`
-test_buffer_size=`expr ${buffer_size} \* 10`
+test_buffer_size=`expr ${buffer_size} \* 5`
 # sudo taskset -c ${CORE_ID} ./rr_lat ${test_buffer_size} 20 | awk '{SUM+=$3} END {print SUM / NR " ns"}' >> profile.lat
 sudo taskset -c ${CORE_ID} ../ci -e latency -s ${test_buffer_size} -n 5 | awk '{SUM+=$4}END{print SUM/NR " ns"}' >> profile.lat
 
