@@ -1,5 +1,0 @@
-PATH=/bin:/usr/bin:sbin:/usr/sbin
-# 1 - rr benchmark, run every 30min.
-0,30 * * * * cd [rrdir] && ./run.sh
-# 2 - stream, run every 30 min.
-25,55 * * * * export OMP_NUM_THREADS=[vcpunum] && cd [streamdir] && ./run.sh
