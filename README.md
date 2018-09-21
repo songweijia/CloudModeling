@@ -1,6 +1,6 @@
 # **_Overview_**
 
-The **_CloudModeling_** toolkit monitors the unreported/fluctuating resource allocations in the IaaS Cloud services. Currently, we have the designed and implemented **_CacheInspector_**, a lightweight runtime that determines the performance and allocated capacity of shared caches on multi-tenant public clouds. **_CacheInspector_** is easy to support 
+The **_CloudModeling_** toolkit monitors the unreported/fluctuating resource allocations in the IaaS Cloud services. Currently, we have the designed and implemented **_CacheInspector_**, a lightweight runtime that determines the performance and allocated capacity of shared caches on multi-tenant public clouds.
 
 # **_CacheInspector_**
 **_CacheInspector_** includes a _profiling_ and a _sampling_ phase. In the _profiling_ phase, **_CacheInspector_** determines the throughput and latency of each level of the memory hierarchy. In the _sampling_ phase, **_CacheInspector_** detects, for each cache level,
