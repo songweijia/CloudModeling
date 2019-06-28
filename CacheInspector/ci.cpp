@@ -62,23 +62,63 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
   // boost_cpu
   boost_cpu();
 
+  std::optional<std::vector<std::vector<long long>>> lpcs = std::vector<std::vector<long long>>();
+  std::optional<std::vector<std::string>> lpcs_md = std::vector<std::string>();
   // read
   if (sequential_throughput(NULL,((size_t)buffer_size_kb)<<10,
-        num_iter,res,0,((uint64_t)batch_size_mb)<<20)) {
+        num_iter,res,
+        lpcs, lpcs_md,
+        0,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
-  printf("READ %.3f GByte/sec std %.3f min %.3f max %.3f\n",
+  printf("\tthroughput");
+  if (lpcs_md.has_value()) {
+      for (auto itr=lpcs_md->begin(); itr!=lpcs_md->end(); itr++) {
+          printf("\t%s", itr->c_str());
+      }
+  }
+  printf("\n");
+  printf("READ %.3f byte/cycle(ref) std %.3f min %.3f max %.3f\n",
     average(num_iter,res), deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
+  for (int i=0;i<num_iter;i++) {
+      printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
+      if (lpcs.has_value()){
+        for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
+            printf("\t%llu", *itr);
+        }
+      }
+      printf("\n");
+  }
 
   // write 
+  lpcs->clear();
+  lpcs_md->clear();
   if (sequential_throughput(NULL,((size_t)buffer_size_kb)<<10,
-        num_iter,res,1,((uint64_t)batch_size_mb)<<20)) {
+        num_iter,res,
+        lpcs, lpcs_md,
+        1,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
-  printf("WRITE %.3f GByte/sec std %.3f min %.3f max %.3f\n",
+  printf("WRITE %.3f byte/cycle(ref) std %.3f min %.3f max %.3f\n",
     average(num_iter,res), deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
+  printf("\tthroughput");
+  if (lpcs_md.has_value()) {
+      for (auto itr=lpcs_md->begin(); itr!=lpcs_md->end(); itr++) {
+          printf("\t%s", itr->c_str());
+      }
+  }
+  printf("\n");
+  for (int i=0;i<num_iter;i++) {
+      printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
+      if (lpcs.has_value()){
+        for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
+            printf("\t%llu", *itr);
+        }
+      }
+      printf("\n");
+  }
 }
 
 int do_cachesize(const uint32_t cache_size_hint_KB,

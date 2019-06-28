@@ -19,6 +19,9 @@ while((err)<0) {\
 #define THROUGHPUT_GBPS(b,s,e) \
   ((double)(b) / TIMESPAN_NS(s,e))
 
+#define THROUGHPUT_BYTES_PER_CYCLE(b,s,e) \
+  ((double)(b) / (e-s))
+
 inline double average(int n, double * res) {
   double sum=0.0f;
   for(int i=0;i<n;i++)

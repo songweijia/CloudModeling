@@ -3,16 +3,21 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
+#include <iostream>
 #include "seq_thp.hpp"
 #include "util.hpp"
+#include "rdtsc.hpp"
 
 #if USE_HUGEPAGE
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <optional>
+
+#include "linux_perf_counters.hpp"
 
 #define FILE_NAME "/mnt/huge/hugepagefile"
-#define ADDR (void *)(0x8000000000000000UL)
+#define ADDR (void *)(0x6000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE)
 #define FLAGS (MAP_SHARED)
 #endif
@@ -24,6 +29,8 @@ extern int32_t volatile sequential_throughput(
   size_t buffer_size,
   uint32_t num_iter,
   double * results,
+  std::optional<std::vector<std::vector<long long>>>& counters,
+  std::optional<std::vector<std::string>>& counters_md,
   uint32_t is_write,
   uint64_t bytes_per_iter,
   uint64_t num_iter_warmup,
@@ -32,7 +39,8 @@ extern int32_t volatile sequential_throughput(
   assert(buffer_size > 0);
 
   int ret = 0;
-  struct timespec ts,te;
+  // struct timespec ts,te;
+  uint64_t ts,te;
   uint64_t iter_per_iter = (bytes_per_iter + buffer_size - 1) / buffer_size;
 
   // STEP 1 - validate/allocate the buffer
@@ -50,6 +58,7 @@ extern int32_t volatile sequential_throughput(
     buf = mmap(ADDR, buffer_size, PROTECTION, FLAGS, fd, 0);
     if (buf == MAP_FAILED) {
       perror("mmap");
+      printf("errno=%d\n",errno);
       unlink(FILE_NAME);
       exit(1);
     }
@@ -74,10 +83,16 @@ extern int32_t volatile sequential_throughput(
     }
   }
 
-  while (num_iter --) {
+  // linux perf counters
+  for(size_t iter=0;iter<num_iter;iter++) {
+    LinuxPerfCounters lpcs;
+
     // STEP 4 - start the timer
-    ret = clock_gettime(CLOCK_REALTIME,&ts);
-    RETURN_ON_ERROR(ret,"clock_gettime");
+    // ret = clock_gettime(CLOCK_REALTIME,&ts);
+    // RETURN_ON_ERROR(ret,"clock_gettime");
+    ts = rdtsc();
+
+    lpcs.start_perf_events();
   
     // STEP 5 - run experiment
     if (is_write) {
@@ -480,11 +495,24 @@ extern int32_t volatile sequential_throughput(
     }
 
     // STEP 6 - end the timer
-    ret = clock_gettime(CLOCK_REALTIME, &te);
-    RETURN_ON_ERROR(ret,"clock_gettime");
+    // ret = clock_gettime(CLOCK_REALTIME, &te);
+    // RETURN_ON_ERROR(ret,"clock_gettime");
+    te = rdtsc();
+
+    lpcs.stop_perf_events();
 
     // STEP 7 - calculate throguhput
-    results[num_iter] = THROUGHPUT_GBPS( (iter_per_iter)*buffer_size, ts, te);
+    results[iter] = THROUGHPUT_BYTES_PER_CYCLE( (iter_per_iter)*buffer_size, ts, te);
+    // std::cout << "iter-" << iter << ", iter_per_iter=" << iter_per_iter << ", buffer_size=" << buffer_size
+    //           << ", ts=" << ts << ", te=" << te << std::endl;
+
+    // STEP 8 - collect counters
+    if (counters.has_value()) {
+        counters->emplace_back(lpcs.getCounters());
+    }
+    if (counters_md.has_value()) {
+        counters_md = lpcs.getMetadata();
+    }
   }
 
   // STEP 8 - clean up

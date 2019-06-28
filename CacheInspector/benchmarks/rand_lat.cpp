@@ -252,7 +252,11 @@ void random_latency(int64_t buffer_size,int num_points,double *output) {
   // STEP 3 - warm_up by scan the buffer 5 times.
   for(int l=0;l<5;l++) {
     for(int i=0;i<num_entries;i+=8) {
+#if (__cplusplus - 0) >= 201703L
+      volatile uint64_t rx;
+#else
       volatile register uint64_t rx;
+#endif
       rx = cll[i];
     }
   }
