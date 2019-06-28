@@ -5,6 +5,7 @@
 #include <string>
 #include <atomic>
 #include <vector>
+#include <map>
 #include "linux_perf_tracepoint_ids.hpp"
 
 /**
@@ -56,15 +57,14 @@ private:
 
 class LinuxPerfCounters {
 private:
-    std::vector<LinuxPerfCounter> counters;
+    std::map<std::string,LinuxPerfCounter> counters;
 
 public:
     LinuxPerfCounters();
     virtual ~LinuxPerfCounters();
     void start_perf_events();
     void stop_perf_events();
-    std::vector<std::string> getMetadata();
-    std::vector<long long> getCounters();
+    std::map<std::string,long long> get();
 };
 
 #endif//LINUX_PERF_COUNTERS_HPP

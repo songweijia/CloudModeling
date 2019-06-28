@@ -62,19 +62,18 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
   // boost_cpu
   boost_cpu();
 
-  std::optional<std::vector<std::vector<long long>>> lpcs = std::vector<std::vector<long long>>();
-  std::optional<std::vector<std::string>> lpcs_md = std::vector<std::string>();
+  std::optional<std::vector<std::map<std::string,long long>>> lpcs = std::vector<std::map<std::string, long long>>();
   // read
   if (sequential_throughput(NULL,((size_t)buffer_size_kb)<<10,
         num_iter,res,
-        lpcs, lpcs_md,
+        lpcs, 
         0,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
   printf("\tthroughput");
-  if (lpcs_md.has_value()) {
-      for (auto itr=lpcs_md->begin(); itr!=lpcs_md->end(); itr++) {
-          printf("\t%s", itr->c_str());
+  if (lpcs.has_value()) {
+      for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
+          printf("\t%s", itr->first.c_str());
       }
   }
   printf("\n");
@@ -85,7 +84,7 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
       printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
       if (lpcs.has_value()){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
-            printf("\t%llu", *itr);
+            printf("\t%llu", itr->second);
         }
       }
       printf("\n");
@@ -93,10 +92,9 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
 
   // write 
   lpcs->clear();
-  lpcs_md->clear();
   if (sequential_throughput(NULL,((size_t)buffer_size_kb)<<10,
         num_iter,res,
-        lpcs, lpcs_md,
+        lpcs,
         1,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
@@ -104,9 +102,9 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
     average(num_iter,res), deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
   printf("\tthroughput");
-  if (lpcs_md.has_value()) {
-      for (auto itr=lpcs_md->begin(); itr!=lpcs_md->end(); itr++) {
-          printf("\t%s", itr->c_str());
+  if (lpcs.has_value()) {
+      for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
+          printf("\t%s", itr->first.c_str());
       }
   }
   printf("\n");
@@ -114,7 +112,7 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
       printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
       if (lpcs.has_value()){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
-            printf("\t%llu", *itr);
+            printf("\t%llu", itr->second);
         }
       }
       printf("\n");

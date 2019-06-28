@@ -29,8 +29,7 @@ extern int32_t volatile sequential_throughput(
   size_t buffer_size,
   uint32_t num_iter,
   double * results,
-  std::optional<std::vector<std::vector<long long>>>& counters,
-  std::optional<std::vector<std::string>>& counters_md,
+  std::optional<std::vector<std::map<std::string,long long>>>& counters,
   uint32_t is_write,
   uint64_t bytes_per_iter,
   uint64_t num_iter_warmup,
@@ -90,7 +89,9 @@ extern int32_t volatile sequential_throughput(
     // STEP 4 - start the timer
     // ret = clock_gettime(CLOCK_REALTIME,&ts);
     // RETURN_ON_ERROR(ret,"clock_gettime");
+#ifndef TIMING_WITH_CPU_CYCLES
     ts = rdtsc();
+#endif
 
     lpcs.start_perf_events();
   
@@ -497,21 +498,24 @@ extern int32_t volatile sequential_throughput(
     // STEP 6 - end the timer
     // ret = clock_gettime(CLOCK_REALTIME, &te);
     // RETURN_ON_ERROR(ret,"clock_gettime");
+#ifndef TIMING_WITH_CPU_CYCLES
     te = rdtsc();
+#endif
 
     lpcs.stop_perf_events();
 
     // STEP 7 - calculate throguhput
+#ifdef TIMING_WITH_CPU_CYCLES
+    results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles"));
+#else
     results[iter] = THROUGHPUT_BYTES_PER_CYCLE( (iter_per_iter)*buffer_size, ts, te);
+#endif
     // std::cout << "iter-" << iter << ", iter_per_iter=" << iter_per_iter << ", buffer_size=" << buffer_size
     //           << ", ts=" << ts << ", te=" << te << std::endl;
 
     // STEP 8 - collect counters
     if (counters.has_value()) {
-        counters->emplace_back(lpcs.getCounters());
-    }
-    if (counters_md.has_value()) {
-        counters_md = lpcs.getMetadata();
+        counters->emplace_back(lpcs.get());
     }
   }
 

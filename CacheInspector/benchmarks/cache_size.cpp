@@ -48,14 +48,13 @@ static int32_t binary_search (
 #ifdef LOG_BINARY_SEARCH
   bs_log[(tot_search_depth-loop) + (tot_search_depth+1)*(num_samples/2)] = pivot;
 #endif//LOG_BINARY_SEARCH
-  std::optional<std::vector<std::vector<long long>>> no_counters;
-  std::optional<std::vector<std::string>> no_counters_md;
+  std::optional<std::vector<std::map<std::string,long long>>> no_counters;
   if (pivot != 0) {
     while(loop --) {
       size_t buffer_size = ((size_t)pivot)<<10;
       ret = sequential_throughput(workspace,buffer_size,
         num_iter_per_sample,thps,
-        no_counters, no_counters_md, // not using the counters.
+        no_counters, // not using the counters.
         is_write,num_bytes_per_iter);
       RETURN_ON_ERROR(ret,"sequential_throughput");
       double v = average(num_iter_per_sample,thps);
