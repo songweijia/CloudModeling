@@ -8,14 +8,13 @@
 #include "util.hpp"
 #include "rdtsc.hpp"
 
+#include <optional>
+#include "linux_perf_counters.hpp"
+
 #if USE_HUGEPAGE
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <optional>
-
-#include "linux_perf_counters.hpp"
-
 #define FILE_NAME "/mnt/huge/hugepagefile"
 #define ADDR (void *)(0x6000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE)
