@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <time.h>
+#include <iostream>
+#include <iomanip>
 
 #include "seq_thp.hpp"
 #include "cache_size.hpp"
@@ -58,7 +60,7 @@ static inline void print_timestamp() {
   }
 }
 
-int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
+int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show_perf_counters) {
   double *res = (double*)malloc(sizeof(double)*num_iter);
 
 #if defined(TIMING_WITH_CPU_CYCLES)
@@ -85,19 +87,19 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
     average(num_iter,res), thp_unit, deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
 
-  printf("\tthroughput");
-  if (lpcs.has_value()) {
+  std::cout << std::left << std::setw(32) << "throughput per iter";
+  if (lpcs.has_value() && show_perf_counters) {
       for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
-          printf("\t%s", itr->first.c_str());
+	  std::cout << std::left << std::setw(16) << itr->first;
       }
   }
   printf("\n");
 
   for (int i=0;i<num_iter;i++) {
-      printf("[%d]-%.3f %s",i,res[i],thp_unit);
-      if (lpcs.has_value()){
+      printf("[%d]-%.3f %s\t",i,res[i],thp_unit);
+      if (lpcs.has_value() && show_perf_counters){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
-            printf("\t%llu", itr->second);
+	    std::cout << std::left << std::setw(16) << itr->second;
         }
       }
       printf("\n");
@@ -116,18 +118,18 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
     average(num_iter,res), thp_unit, deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
 
-  printf("\tthroughput");
-  if (lpcs.has_value()) {
+  std::cout << std::left << std::setw(32) << "thoughput per iter";
+  if (lpcs.has_value() && show_perf_counters) {
       for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
-          printf("\t%s", itr->first.c_str());
+	  std::cout << std::left << std::setw(16) << itr->first;
       }
   }
   printf("\n");
   for (int i=0;i<num_iter;i++) {
-      printf("[%d]-%.3f %s",i,res[i],thp_unit);
-      if (lpcs.has_value()){
+      printf("[%d]-%.3f %s\t",i,res[i],thp_unit);
+      if (lpcs.has_value() && show_perf_counters){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
-            printf("\t%llu", itr->second);
+	    std::cout << std::left << std::setw(16) << itr->second;
         }
       }
       printf("\n");
@@ -184,7 +186,7 @@ int main(int argc, char **argv) {
   bool show_perf_counters = false;
   // parse arguments.
   while(1) {
-    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:h", opts, &option_index);
+    c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:hp", opts, &option_index);
     if (c == -1)
       break;
 
@@ -257,7 +259,7 @@ int main(int argc, char **argv) {
     fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
     fprintf(stderr,"batch_size_mb:\t%d\n",batch_size_mb);
     while(nloop --)
-      do_throughput(buffer_size_kb,num_datapoints,batch_size_mb);
+      do_throughput(buffer_size_kb,num_datapoints,batch_size_mb,show_perf_counters);
     break;
 
   case EXP_CACHESIZE:

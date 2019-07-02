@@ -3,8 +3,11 @@ include config.mk
 CFLAGS=-I. -Ibenchmarks -O3
 CPPFLAGS=-I. -Ibenchmarks -O3 --std=c++1z
 
-CFLAGS=-I. -Ibenchmarks -O3 $(PREDEFINES)
-CPPFLAGS=-I. -Ibenchmarks -O3 --std=c++1z $(PREDEFINES)
+# CFLAGS=-I. -Ibenchmarks -O0 -ggdb
+# CPPFLAGS=-I. -Ibenchmarks -O0 -ggdb --std=c++1z
+
+CFLAGS += $(PREDEFINES)
+CPPFLAGS += $(PREDEFINES)
 LDFLAGS=
 LDLIBS=
 SRCS=ci.cpp benchmarks/seq_thp.cpp benchmarks/cache_size.cpp benchmarks/rand_lat.cpp benchmarks/linux_perf_counters.cpp

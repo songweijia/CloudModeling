@@ -516,7 +516,7 @@ extern int32_t volatile sequential_throughput(
 
     // STEP 7 - calculate throguhput
 #ifdef TIMING_WITH_CPU_CYCLES
-    results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles"));
+    results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
 #elif defined(TIMING_WITH_RDTSC)
     results[iter] = THROUGHPUT_BYTES_PER_CYCLE( (iter_per_iter)*buffer_size, ts, te);
 #elif defined(TIMING_WITH_CLOCK_GETTIME)
