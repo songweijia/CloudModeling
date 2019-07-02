@@ -68,6 +68,7 @@ public:
     void start_perf_events();
     void stop_perf_events();
     std::map<std::string,long long> get();
+    virtual void print(std::ostream& os, bool withMetadata = true);
 };
 
 #endif//LINUX_PERF_COUNTERS_HPP

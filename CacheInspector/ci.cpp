@@ -23,6 +23,7 @@
  "--search_(d)epth <11>\n" \
  "--(N)um_of_thp_dps_per_binary_search <5>\n" \
  "--(L)oop <1> \n" \
+ "--show (p)erf counters\n" \
  "--(h)elp\n"
 
 const struct option opts[] = {
@@ -37,6 +38,7 @@ const struct option opts[] = {
   {"search_depth",      required_argument,      0, 'd'},
   {"Loop",              required_argument,      0, 'L'},
   {"Num_of_thp_dps_per_binary_search", required_argument, 0, 'N'},
+  {"perf",              no_argument,            0, 'p'},
   {0,0,0,0}
 };
 
@@ -179,6 +181,7 @@ int main(int argc, char **argv) {
   int32_t search_depth = 11;
   int32_t num_of_thp_dps_per_binary_search = 5;
   int nloop = 1;
+  bool show_perf_counters = false;
   // parse arguments.
   while(1) {
     c = getopt_long(argc, argv, "e:s:S:n:l:u:c:d:N:L:h", opts, &option_index);
@@ -231,6 +234,10 @@ int main(int argc, char **argv) {
 
     case 'N':
       num_of_thp_dps_per_binary_search = (int32_t)atoi(optarg);
+      break;
+
+    case 'p':
+      show_perf_counters = true;
       break;
 
     default:
