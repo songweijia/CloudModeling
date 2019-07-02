@@ -10,6 +10,7 @@
 #include <sched.h>
 #include <stdlib.h>
 #include "rand_lat.hpp"
+#include "linux_perf_counters.hpp"
 
 static uint64_t rx=123456789L;
 static uint64_t ry=362436069L;
@@ -72,12 +73,22 @@ static bool fill_cyclic_linked_list(uint64_t *cll, int64_t ecnt) {
   return true;
 }
 
-static float traverse_cyclic_linked_list (int64_t num, uint64_t *cll ) {
+static double traverse_cyclic_linked_list (int64_t num, uint64_t *cll, 
+   std::optional<std::vector<std::map<std::string, long long>>>& counters) {
+
+  LinuxPerfCounters lpcs;
+  lpcs.start_perf_events();
+
+#if defined(TIMING_WITH_CLOCK_GETTIME)
   struct timespec t1,t2;
   if(clock_gettime(CLOCK_MONOTONIC,&t1) < 0) {
     fprintf(stderr, "failed to call clock_gettime().\n");
     return 0.0f;
   }
+#elif defined(TIMING_WITH_RDTSC)
+  uint64_t t1,t2;
+  t1 = rdtsc();
+#endif
   // STEP 1 - traverse
   __asm__ volatile (
     "movq	%0, %%rax \n\t"
@@ -220,14 +231,39 @@ static float traverse_cyclic_linked_list (int64_t num, uint64_t *cll ) {
     : "m"(num), "m"(cll)
     : "rax","rbx"
   );
+
+#if defined(TIMING_WITH_CLOCK_GETTIME)
   if(clock_gettime(CLOCK_MONOTONIC,&t2) < 0) {
     fprintf(stderr, "failed to call clock_gettime().\n");
     return 0.0f;
   }
-  return (double)(t2.tv_sec-t1.tv_sec)*1e9 + (double)(t2.tv_nsec - t1.tv_nsec);
+#elif defined(TIMING_WITH_RDTSC)
+  t2 = rdtsc();
+#elif defined(TIMING_WITH_CPU_CYCLES)
+#else
+#endif
+
+  lpcs.stop_perf_events();
+
+  if (counters.has_value()){
+      counters->emplace_back(lpcs.get());
+  }
+
+  double ret = 0.0f;
+#if defined(TIMING_WITH_CLOCK_GETTIME)
+  ret = static_cast<double>(t2.tv_sec-t1.tv_sec)*1e9 + static_cast<double>(t2.tv_nsec - t1.tv_nsec);
+#elif defined(TIMING_WITH_RDTSC)
+  ret = static_cast<double>(t2 - t1);
+#elif defined(TIMING_WITH_CPU_CYCLES)
+  ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
+#else
+#error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
+#endif
+
+  return ret;
 }
 
-void random_latency(int64_t buffer_size,int num_points,double *output) {
+void random_latency(int64_t buffer_size,int num_points,double *output,std::optional<std::vector<std::map<std::string,long long>>>& counters) {
   // STEP 1 - prepare the cyclic linked list
   uint64_t * cll;
   int64_t num_entries = buffer_size/sizeof(uint64_t);
@@ -264,7 +300,7 @@ void random_latency(int64_t buffer_size,int num_points,double *output) {
   // STEP 4 - test
   #define NUMBER_OF_ACCESS (16<<10)
   for(int i=0;i<num_points;i++)
-    output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS,cll+(i%num_entries))/NUMBER_OF_ACCESS;
+    output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS,cll+(i%num_entries),counters)/NUMBER_OF_ACCESS;
 
   // STEP 5 - clean up
   free(cll);

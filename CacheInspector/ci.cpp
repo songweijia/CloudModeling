@@ -162,11 +162,39 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
 }
 
 int do_latency(const int buffer_size_kb,
-  const int num_datapoints) {
+  const int num_datapoints,
+  const bool show_perf_counters) {
   double *latencies = (double*)malloc(sizeof(double)*num_datapoints);
-  random_latency(((int64_t)buffer_size_kb<<10),num_datapoints,latencies);
-  for (int i;i<num_datapoints;i++)
-    fprintf(stdout, "%d KB -- %.3f ns\n", buffer_size_kb, latencies[i]);
+  std::optional<std::vector<std::map<std::string,long long>>> lpcs = std::vector<std::map<std::string, long long>>();
+
+  random_latency(((int64_t)buffer_size_kb<<10),num_datapoints,latencies,lpcs);
+
+#if defined(TIMING_WITH_CPU_CYCLES)
+    const char *lat_unit = "cycles(CPU)";
+#elif defined(TIMING_WITH_RDTSC)
+    const char *lat_unit = "cycles(TSC)";
+#elif defined(TIMING_WITH_CLOCK_GETTIME)
+    const char *lat_unit = "nanosecond";
+#endif
+
+  std::cout<<std::left<<std::setw(32)<<"Read latency";
+  if (lpcs.has_value() && show_perf_counters) {
+      for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
+          std::cout << std::left << std::setw(16) << itr->first;
+      }
+  }
+  printf("\n");
+
+  for (int i=0;i<num_datapoints;i++) {
+      printf("[%d]-%.3f %s\t\t",i,latencies[i],lat_unit);
+      if (lpcs.has_value() && show_perf_counters){
+        for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
+	        std::cout << std::left << std::setw(16) << itr->second;
+        }
+      }
+      printf("\n");
+  }
+
   free((void*)latencies);
 }
 
@@ -284,7 +312,7 @@ int main(int argc, char **argv) {
     fprintf(stderr,"buffer_size_kb:\t%d\n",buffer_size_kb);
     fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
     while(nloop --){
-      do_latency(buffer_size_kb,num_datapoints);
+      do_latency(buffer_size_kb,num_datapoints,show_perf_counters);
     }
     break;
   default:
