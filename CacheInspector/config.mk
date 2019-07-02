@@ -15,21 +15,30 @@ ENABLE_HUGEPAGE = 0
 # 3 - cpu_cycles: using perf's cpu cycle event. The cpu cycle counter is
 #     a hardware resource which is not always available to container or virtual
 #     machines.
-TIMING_SERVICE = rdtsc
+TIMING_SERVICE = cpu_cycles
+
+# show perf cpu cycles
+SHOW_PERF_CPU_CYCLES = 1
 
 # show performance counters during the tests.
-SHOW_PERF_SCHED_SWITCH = 1
+SHOW_PERF_SCHED_SWITCH = 0
+
 # - hardware counters in intel cpu:
 SHOW_INTEL_CPU_CYCLES = 0
-SHOW_INTEL_REF_CYCLES = 0
+SHOW_INTEL_REF_CYCLES = 1
 SHOW_INTEL_LLC_HITS = 0
 SHOW_INTEL_LLC_MISSES = 0
+
 # - sandybridge performance counters
 SHOW_INTEL_SANDYBRIDGE_DTLB_LOAD_MISS_CAUSES_A_PAGE_WALK = 0
 SHOW_INTEL_SANDYBRIDGE_DTLB_STORE_MISS_CAUSES_A_PAGE_WALK = 0
 SHOW_INTEL_SANDYBRIDGE_L1C_HITS = 0
 SHOW_INTEL_SANDYBRIDGE_L2C_HITS = 0
 SHOW_INTEL_SANDYBRIDGE_ICACHE_MISSES = 0
+
+#  ////////////////////////////////////////////////////////////////
+# / Configuration section ends here. Don't change anything below /
+#////////////////////////////////////////////////////////////////
 
 PREDEFINES=
 
@@ -43,6 +52,10 @@ else ifeq ($(TIMING_SERVICE),cpu_cycles)
     PREDEFINES += -DTIMING_WITH_CPU_CYCLES
 else
     PREDEFINES += -DTIMING_WITH_CLOCK_GETTIME
+endif
+
+ifeq ($(SHOW_PERF_CPU_CYCLES),1)
+    PREDEFINES += -DUSE_PERF_CPU_CYCLES
 endif
 
 ifeq ($(SHOW_PERF_SCHED_SWITCH),1)

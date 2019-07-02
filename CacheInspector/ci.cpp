@@ -59,6 +59,14 @@ static inline void print_timestamp() {
 int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
   double *res = (double*)malloc(sizeof(double)*num_iter);
 
+#if defined(TIMING_WITH_CPU_CYCLES)
+    const char *thp_unit = "byte/cycle(CPU)";
+#elif defined(TIMING_WITH_RDTSC)
+    const char *thp_unit = "byte/cycle(TSC)";
+#elif defined(TIMING_WITH_CLOCK_GETTIME)
+    const char *thp_unit = "GBps";
+#endif
+
   // boost_cpu
   boost_cpu();
 
@@ -70,6 +78,11 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
         0,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
+
+  printf("READ %.3f %s std %.3f min %.3f max %.3f\n",
+    average(num_iter,res), thp_unit, deviation(num_iter,res),
+    minimum(num_iter,res), maximum(num_iter,res));
+
   printf("\tthroughput");
   if (lpcs.has_value()) {
       for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
@@ -77,11 +90,9 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
       }
   }
   printf("\n");
-  printf("READ %.3f byte/cycle(ref) std %.3f min %.3f max %.3f\n",
-    average(num_iter,res), deviation(num_iter,res),
-    minimum(num_iter,res), maximum(num_iter,res));
+
   for (int i=0;i<num_iter;i++) {
-      printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
+      printf("[%d]-%.3f %s",i,res[i],thp_unit);
       if (lpcs.has_value()){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
             printf("\t%llu", itr->second);
@@ -98,9 +109,11 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
         1,((uint64_t)batch_size_mb)<<20)) {
     fprintf(stderr, "experiment failed...\n");
   }
-  printf("WRITE %.3f byte/cycle(ref) std %.3f min %.3f max %.3f\n",
-    average(num_iter,res), deviation(num_iter,res),
+
+  printf("WRITE %.3f %s std %.3f min %.3f max %.3f\n",
+    average(num_iter,res), thp_unit, deviation(num_iter,res),
     minimum(num_iter,res), maximum(num_iter,res));
+
   printf("\tthroughput");
   if (lpcs.has_value()) {
       for (auto itr=(*lpcs)[0].begin(); itr!=(*lpcs)[0].end(); itr++) {
@@ -109,7 +122,7 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb) {
   }
   printf("\n");
   for (int i=0;i<num_iter;i++) {
-      printf("[%d]-%.3f byte/cycle(ref)",i,res[i]);
+      printf("[%d]-%.3f %s",i,res[i],thp_unit);
       if (lpcs.has_value()){
         for (auto itr=(*lpcs)[i].begin(); itr!=(*lpcs)[i].end(); itr++) {
             printf("\t%llu", itr->second);
