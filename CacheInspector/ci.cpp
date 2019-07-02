@@ -19,8 +19,8 @@
  "--buffer_(s)ize <size in KB>\n" \
  "--(n)um_of_datapoints <num>\n" \
  "--batch_(S)ize <size in MB>\n" \
- "--(u)pper_thp_GBps <20.00>\n" \
- "--(l)ower_thp_GBps <10.00>\n" \
+ "--(u)pper_read_thp (unit in bytes/cycle or GB/s, based on timing facility)\n" \
+ "--(l)ower_read_thp (unit in bytes/cycle or GB/s, based on timing facility)\n" \
  "--(c)ache_size_hint_KB <20480>\n" \
  "--search_(d)epth <11>\n" \
  "--(N)um_of_thp_dps_per_binary_search <5>\n" \
@@ -34,8 +34,8 @@ const struct option opts[] = {
   {"num_of_datapoints", required_argument,      0, 'n'},
   {"help",              no_argument,            0, 'h'},
   {"batch_size",        required_argument,      0, 'S'},
-  {"upper_thp_GBps",    required_argument,      0, 'u'},
-  {"lower_thp_GBps",    required_argument,      0, 'l'},
+  {"upper_read_thp",    required_argument,      0, 'u'},
+  {"lower_read_thp",    required_argument,      0, 'l'},
   {"cache_size_hint_KB",required_argument,      0, 'c'},
   {"search_depth",      required_argument,      0, 'd'},
   {"Loop",              required_argument,      0, 'L'},
@@ -137,8 +137,8 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show
 }
 
 int do_cachesize(const uint32_t cache_size_hint_KB,
-  const double upper_thp_GBps,
-  const double lower_thp_GBps,
+  const double upper_read_thp,
+  const double lower_read_thp,
   const int num_data_points,
   const int batch_size,
   const bool is_write,
@@ -146,11 +146,11 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
   const int32_t num_of_thp_dps_per_binary_search) {
 
   uint32_t css[num_data_points];
-  assert (upper_thp_GBps > 0.0);
-  assert (lower_thp_GBps > 0.0);
+  assert (upper_read_thp > 0.0);
+  assert (lower_read_thp > 0.0);
   assert (num_data_points > 0);
 
-  int ret = eval_cache_size(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,css,num_data_points,is_write,search_depth,num_of_thp_dps_per_binary_search,((uint64_t)batch_size) << 20);
+  int ret = eval_cache_size(cache_size_hint_KB,upper_read_thp,lower_read_thp,css,num_data_points,is_write,search_depth,num_of_thp_dps_per_binary_search,((uint64_t)batch_size) << 20);
   if(ret) {
     fprintf(stderr,"failed...\n");
     return ret;
@@ -177,8 +177,8 @@ int main(int argc, char **argv) {
   int num_datapoints = 0;
   int batch_size_mb = (1<<8);
   enum CMExp exp = EXP_HELP;
-  double upper_thp_GBps = 0.0f;
-  double lower_thp_GBps = 0.0f;
+  double upper_read_thp = 0.0f;
+  double lower_read_thp = 0.0f;
   uint32_t cache_size_hint_KB = 10240;
   int32_t search_depth = 11;
   int32_t num_of_thp_dps_per_binary_search = 5;
@@ -219,11 +219,11 @@ int main(int argc, char **argv) {
       break;
 
     case 'l':
-      lower_thp_GBps = atof(optarg);
+      lower_read_thp = atof(optarg);
       break;
 
     case 'u':
-      upper_thp_GBps = atof(optarg);
+      upper_read_thp = atof(optarg);
       break;
 
     case 'c':
@@ -266,15 +266,15 @@ int main(int argc, char **argv) {
     fprintf(stderr,"=== Cache Size Test ===\n");
     fprintf(stderr,"nloop:\t%d\n",nloop);
     fprintf(stderr,"cache_size_hint_KB:\t%d\n",cache_size_hint_KB);
-    fprintf(stderr,"upper_thp_GBps:\t%f\n",upper_thp_GBps);
-    fprintf(stderr,"lower_thp_GBps:\t%f\n",lower_thp_GBps);
+    fprintf(stderr,"upper_read_thp:\t%f\n",upper_read_thp);
+    fprintf(stderr,"lower_read_thp:\t%f\n",lower_read_thp);
     fprintf(stderr,"num_datapoints:\t%d\n",num_datapoints);
     fprintf(stderr,"batch_size_mb:\t%d\n",batch_size_mb);
     fprintf(stderr,"search_depth:\t%d\n",search_depth);
     fprintf(stderr,"num_of_thp_dps_per_binary_search:\t%d\n",num_of_thp_dps_per_binary_search);
     while(nloop --){
       // print_timestamp();
-      do_cachesize(cache_size_hint_KB,upper_thp_GBps,lower_thp_GBps,num_datapoints,batch_size_mb,true,search_depth,num_of_thp_dps_per_binary_search);
+      do_cachesize(cache_size_hint_KB,upper_read_thp,lower_read_thp,num_datapoints,batch_size_mb,false,search_depth,num_of_thp_dps_per_binary_search);
     }
     break;
 

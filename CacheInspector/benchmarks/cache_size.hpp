@@ -6,9 +6,13 @@
 /**
  * evaluate the cache size for a given instance
  * @param cache_size_hint_KB
- * @param upper_thp_GBps - if we are measuring L2 cache, this is going to be 
- *        the pre-evaluated throughput for L2 cache
- * @param lower_thp_GBps - if we are measuring L3 cache, this is going to be
+ * @param upper_thp - if we are measuring L2 cache, this is going to be 
+ *        the pre-evaluated throughput for L2 cache. The unit of the throughput
+ *        is decided by timing configuration used (see config.mk):
+ *        1) For 'cpu_cycles', the throughput is in bytes per cpu cycle
+ *        2) For 'rdtsc', the throughput is in bytes per tsc cycle
+ *        3) For 'clock_gettime', the throughput is in GB per second
+ * @param lower_thp - if we are measuring L3 cache, this is going to be
  *        the pre-evaluated throughput of L3 cache (or memory if no L3 cache)
  * @param css - the output parameter, pointing to an array of uint32_t with
  *        'num_samples' entries. They are the values in KB.
@@ -29,8 +33,8 @@
  */
 extern int eval_cache_size(
   const uint32_t cache_size_hint_KB,
-  const double upper_thp_GBps,
-  const double lower_thp_GBps,
+  const double upper_thp,
+  const double lower_thp,
   uint32_t * css,
   const int num_samples = 1,
   const bool is_write = true,

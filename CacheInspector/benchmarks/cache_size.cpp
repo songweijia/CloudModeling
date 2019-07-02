@@ -117,8 +117,8 @@ static int32_t binary_search (
 
 int eval_cache_size(
   const uint32_t cache_size_hint_KB,
-  const double upper_thp_GBps,
-  const double lower_thp_GBps,
+  const double upper_thp,
+  const double lower_thp,
   uint32_t * css,
   const int num_samples,
   const bool is_write,
@@ -152,11 +152,9 @@ int eval_cache_size(
   RETURN_ON_ERROR(ret,"posix_memalign()");
 #endif
 
-  // printf("L3 Write Throughput: %.3f GB/s.\n", upper_thp_GBps);
-  // printf("Memory Write Throughput: %.3f GB/s.\n",lower_thp_GBps);
   double thps[num_samples];
   for(i=0;i<num_samples;i++)
-    thps[i] = upper_thp_GBps - (upper_thp_GBps - lower_thp_GBps) * (i + 1) / (num_samples + 1);
+    thps[i] = upper_thp- (upper_thp- lower_thp) * (i + 1) / (num_samples + 1);
 
 #ifdef LOG_BINARY_SEARCH
   const int num_log_entry = num_samples*(search_depth+1);
