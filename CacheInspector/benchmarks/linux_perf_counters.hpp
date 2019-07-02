@@ -1,11 +1,11 @@
 #ifndef LINUX_PERF_COUNTERS_HPP
 #define LINUX_PERF_COUNTERS_HPP
 
-#include <linux/perf_event.h>
-#include <string>
 #include <atomic>
-#include <vector>
+#include <linux/perf_event.h>
 #include <map>
+#include <string>
+#include <vector>
 
 #if USE_PERF_TRACEPOINT_HEADER
 #include "linux_perf_tracepoint_ids.hpp"
@@ -32,10 +32,10 @@ class LinuxPerfCounter {
 public:
     // constructor
     LinuxPerfCounter(const char* name,
-        uint32_t type,
-        uint64_t config,
-        bool exclude_kernel = true,
-        bool exclude_hv = true);
+                     uint32_t type,
+                     uint64_t config,
+                     bool exclude_kernel = true,
+                     bool exclude_hv = true);
     // moving constructor
     LinuxPerfCounter(LinuxPerfCounter&& lpc);
     // destructor
@@ -50,6 +50,7 @@ public:
     const std::string getName();
     // give up ownership of the fd for moving constructor
     void giveup();
+
 private:
     const std::string name;
     long long counter;
@@ -60,15 +61,15 @@ private:
 
 class LinuxPerfCounters {
 private:
-    std::map<std::string,LinuxPerfCounter> counters;
+    std::map<std::string, LinuxPerfCounter> counters;
 
 public:
     LinuxPerfCounters();
     virtual ~LinuxPerfCounters();
     void start_perf_events();
     void stop_perf_events();
-    std::map<std::string,long long> get();
+    std::map<std::string, long long> get();
     virtual void print(std::ostream& os, bool withMetadata = true);
 };
 
-#endif//LINUX_PERF_COUNTERS_HPP
+#endif  //LINUX_PERF_COUNTERS_HPP

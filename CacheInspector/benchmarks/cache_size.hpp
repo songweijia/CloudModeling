@@ -32,14 +32,14 @@
  * @return 0 for success, otherwise failure
  */
 extern int eval_cache_size(
-  const uint32_t cache_size_hint_KB,
-  const double upper_thp,
-  const double lower_thp,
-  uint32_t * css,
-  const int num_samples = 1,
-  const bool is_write = true,
-  const int32_t search_depth = 10,
-  const uint32_t num_iter_per_sample = 5,
-  const uint64_t num_bytes_per_iter = (1ull << 28));
+        const uint32_t cache_size_hint_KB,
+        const double upper_thp,
+        const double lower_thp,
+        uint32_t* css,
+        const int num_samples = 1,
+        const bool is_write = true,
+        const int32_t search_depth = 10,
+        const uint32_t num_iter_per_sample = 5,
+        const uint64_t num_bytes_per_iter = (1ull << 28));
 
-#endif//__CACHE_SIZE_HPP_
+#endif  //__CACHE_SIZE_HPP_
