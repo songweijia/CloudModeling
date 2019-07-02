@@ -6,7 +6,10 @@
 #include <atomic>
 #include <vector>
 #include <map>
+
+#if USE_PERF_TRACEPOINT_HEADER
 #include "linux_perf_tracepoint_ids.hpp"
+#endif
 
 /**
  * Macros controlling which counters are used:
