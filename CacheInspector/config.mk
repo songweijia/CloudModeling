@@ -15,7 +15,7 @@ ENABLE_HUGEPAGE = 0
 # 3 - cpu_cycles: using perf's cpu cycle event. The cpu cycle counter is
 #     a hardware resource which is not always available to container or virtual
 #     machines.
-TIMING_SERVICE = clock_gettime
+TIMING_SERVICE = rdtsc
 
 # show performance counters during the tests.
 SHOW_PERF_SCHED_SWITCH = 1

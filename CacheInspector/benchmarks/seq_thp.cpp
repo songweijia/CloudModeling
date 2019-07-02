@@ -37,8 +37,13 @@ extern int32_t volatile sequential_throughput(
   assert(buffer_size > 0);
 
   int ret = 0;
-  // struct timespec ts,te;
+#ifdef TIMING_WITH_CLOCK_GETTIME
+  struct timespec ts,te;
+#endif
+
+#ifdef TIMING_WITH_RDTSC
   uint64_t ts,te;
+#endif
   uint64_t iter_per_iter = (bytes_per_iter + buffer_size - 1) / buffer_size;
 
   // STEP 1 - validate/allocate the buffer
@@ -86,9 +91,12 @@ extern int32_t volatile sequential_throughput(
     LinuxPerfCounters lpcs;
 
     // STEP 4 - start the timer
-    // ret = clock_gettime(CLOCK_REALTIME,&ts);
-    // RETURN_ON_ERROR(ret,"clock_gettime");
-#ifndef TIMING_WITH_CPU_CYCLES
+#ifdef TIMING_WITH_CLOCK_GETTIME
+    ret = clock_gettime(CLOCK_REALTIME,&ts);
+    RETURN_ON_ERROR(ret,"clock_gettime");
+#endif
+
+#ifdef TIMING_WITH_RDTSC
     ts = rdtsc();
 #endif
 
@@ -495,9 +503,12 @@ extern int32_t volatile sequential_throughput(
     }
 
     // STEP 6 - end the timer
-    // ret = clock_gettime(CLOCK_REALTIME, &te);
-    // RETURN_ON_ERROR(ret,"clock_gettime");
-#ifndef TIMING_WITH_CPU_CYCLES
+#ifdef TIMING_WITH_CLOCK_GETTIME
+    ret = clock_gettime(CLOCK_REALTIME, &te);
+    RETURN_ON_ERROR(ret,"clock_gettime");
+#endif
+
+#ifdef TIMING_WITH_RDTSC
     te = rdtsc();
 #endif
 
@@ -506,11 +517,13 @@ extern int32_t volatile sequential_throughput(
     // STEP 7 - calculate throguhput
 #ifdef TIMING_WITH_CPU_CYCLES
     results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles"));
-#else
+#elif defined(TIMING_WITH_RDTSC)
     results[iter] = THROUGHPUT_BYTES_PER_CYCLE( (iter_per_iter)*buffer_size, ts, te);
+#elif defined(TIMING_WITH_CLOCK_GETTIME)
+    results[iter] = THROUGHPUT_GBPS((iter_per_iter)*buffer_size, ts, te);
+#else
+#error Timing facility not specified, please define either TIMING_WITH_CLOCK_GETTIME, TIMEING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
 #endif
-    // std::cout << "iter-" << iter << ", iter_per_iter=" << iter_per_iter << ", buffer_size=" << buffer_size
-    //           << ", ts=" << ts << ", te=" << te << std::endl;
 
     // STEP 8 - collect counters
     if (counters.has_value()) {
