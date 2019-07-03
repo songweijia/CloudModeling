@@ -90,8 +90,8 @@ uint64_t random_number(uint64_t min, uint64_t max, bitmap_t* map) {
     return x;
 }
 
-uint64_t* random_arr(uint64_t size_kb) {
-    uint64_t memsize = (size_kb << 10);
+uint64_t* random_arr(uint64_t size_KiB) {
+    uint64_t memsize = (size_KiB << 10);
     uint64_t arr_size = memsize / sizeof(uint64_t);
     bitmap_t* arr_bitmap = bitmap_new(arr_size);
     uint64_t* arr = (uint64_t*)memalign(1024, memsize);
@@ -137,7 +137,7 @@ uint64_t get_clock_instrument_overhead() {
 
 int main(int argc, char const* argv[]) {
     if(argc != 3) {
-        printf("USAGE:%s <buffer size(KB)> <number of datapoints>\n", argv[0]);
+        printf("USAGE:%s <buffer size(KiB)> <number of datapoints>\n", argv[0]);
         return -1;
     }
 
@@ -150,11 +150,11 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    uint64_t size_kb = atoi(argv[1]);  //size of memory in kb
+    uint64_t size_KiB = atoi(argv[1]);  //size of memory in KiB
     uint64_t num_points = (uint64_t)atol(argv[2]);
-    uint64_t size = size_kb << 10;  //size of memory in bytes
+    uint64_t size = size_KiB << 10;  //size of memory in bytes
 
-    uint64_t* arr = random_arr(size_kb);
+    uint64_t* arr = random_arr(size_KiB);
 
     register uint64_t i, j;
     //        register volatile uint64_t temp;
@@ -302,7 +302,7 @@ int main(int argc, char const* argv[]) {
             temp = *((uint64_t*)temp);
         }
         clock_gettime(CLOCK_REALTIME, &t2);
-        printf("%" PRIu64 " KB %.2f ns\n", size_kb, ((double)((t2.tv_sec - t1.tv_sec) * 1000000000l + t2.tv_nsec - t1.tv_nsec) - clock_overhead) / 1048576);
+        printf("%" PRIu64 " KiB %.2f ns\n", size_KiB, ((double)((t2.tv_sec - t1.tv_sec) * 1000000000l + t2.tv_nsec - t1.tv_nsec) - clock_overhead) / 1048576);
     }
     x = temp;
     free(arr);

@@ -18,7 +18,7 @@
  *                        rdtsc instruction, which may be normalized.
  * @param counters      - output parameter for receiving linux perf counters.
  * @param bytes_per_iter- how many bytes to measure for each data point,
- *                        default to 256MB.
+ *                        default to 256MiB.
  * @param num_iter_warmup
  *                      - number of iterations for warm up, default to 2
  * @param buf_alignment - alignment for the buffer, default to 4K

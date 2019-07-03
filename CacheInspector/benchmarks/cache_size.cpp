@@ -17,12 +17,12 @@ static int32_t binary_search(
         int32_t* bs_log,
         const int32_t tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
-        const uint32_t seed_kb,
+        const uint32_t seed_KiB,
         const double* target_thps,
         const int num_samples,
         const bool is_write,
         const int32_t search_depth,
-        void* workspace,  // a memory workspace with MEM_ALLOCATION 256MB.
+        void* workspace,  // a memory workspace with MEM_ALLOCATION 256MiB.
         uint32_t* output,
         const int32_t num_iter_per_sample,
         const uint64_t num_bytes_per_iter,
@@ -40,7 +40,7 @@ static int32_t binary_search(
     const double target_thp = target_thps[num_samples / 2];
 
     // search ...
-    uint32_t pivot = seed_kb;
+    uint32_t pivot = seed_KiB;
     double thps[num_iter_per_sample];
     uint32_t ret = 0;
 
@@ -118,7 +118,7 @@ static int32_t binary_search(
 }
 
 int eval_cache_size(
-        const uint32_t cache_size_hint_KB,
+        const uint32_t cache_size_hint_KiB,
         const double upper_thp,
         const double lower_thp,
         uint32_t* css,
@@ -171,7 +171,7 @@ int eval_cache_size(
             bs_log,
             search_depth,
 #endif  //LOG_BINARY_SEARCH
-            cache_size_hint_KB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
+            cache_size_hint_KiB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
     RETURN_ON_ERROR(ret, "binary_search");
 
 #ifdef LOG_BINARY_SEARCH

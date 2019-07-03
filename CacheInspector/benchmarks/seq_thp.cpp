@@ -514,7 +514,7 @@ extern int32_t volatile sequential_throughput(
 #elif defined(TIMING_WITH_RDTSC)
         results[iter] = THROUGHPUT_BYTES_PER_CYCLE((iter_per_iter)*buffer_size, ts, te);
 #elif defined(TIMING_WITH_CLOCK_GETTIME)
-        results[iter] = THROUGHPUT_GBPS((iter_per_iter)*buffer_size, ts, te);
+        results[iter] = THROUGHPUT_GiBPS((iter_per_iter)*buffer_size, ts, te);
 #else
 #error Timing facility not specified, please define either TIMING_WITH_CLOCK_GETTIME, TIMEING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
 #endif

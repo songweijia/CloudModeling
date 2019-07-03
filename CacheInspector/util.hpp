@@ -16,8 +16,8 @@ while((err)<0) {\
 #define TIMESPAN_NS(s,e) \
   (( (e).tv_sec - (s).tv_sec ) * 1000000000 + ( (e).tv_nsec - (s).tv_nsec ))
 
-#define THROUGHPUT_GBPS(b,s,e) \
-  ((double)(b) / TIMESPAN_NS(s,e))
+#define THROUGHPUT_GiBPS(b,s,e) \
+  ((double)(b) / TIMESPAN_NS(s,e) * 1e9 / (1l<<30))
 
 #define THROUGHPUT_BYTES_PER_CYCLE(b,s,e) \
   ((double)(b) / (e-s))

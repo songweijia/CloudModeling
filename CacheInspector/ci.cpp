@@ -16,12 +16,12 @@
 #define HELP_INFO                                                                  \
     "CacheInspector benchmark\n"                                                   \
     "--(e)xperiment throughput|latency|cachesize\n"                                \
-    "--buffer_(s)ize <size in KB>\n"                                               \
+    "--buffer_(s)ize <size in KiB>\n"                                               \
     "--(n)um_of_datapoints <num>\n"                                                \
-    "--batch_(S)ize <size in MB>\n"                                                \
-    "--(u)pper_read_thp (unit in bytes/cycle or GB/s, based on timing facility)\n" \
-    "--(l)ower_read_thp (unit in bytes/cycle or GB/s, based on timing facility)\n" \
-    "--(c)ache_size_hint_KB <20480>\n"                                             \
+    "--batch_(S)ize <size in MiB>\n"                                                \
+    "--(u)pper_read_thp (unit in bytes/cycle or GiB/s, based on timing facility)\n" \
+    "--(l)ower_read_thp (unit in bytes/cycle or GiB/s, based on timing facility)\n" \
+    "--(c)ache_size_hint_KiB <20480>\n"                                             \
     "--search_(d)epth <11>\n"                                                      \
     "--(N)um_of_thp_dps_per_binary_search <5>\n"                                   \
     "--(L)oop <1> \n"                                                              \
@@ -36,7 +36,7 @@ const struct option opts[] = {
         {"batch_size", required_argument, 0, 'S'},
         {"upper_read_thp", required_argument, 0, 'u'},
         {"lower_read_thp", required_argument, 0, 'l'},
-        {"cache_size_hint_KB", required_argument, 0, 'c'},
+        {"cache_size_hint_KiB", required_argument, 0, 'c'},
         {"search_depth", required_argument, 0, 'd'},
         {"Loop", required_argument, 0, 'L'},
         {"Num_of_thp_dps_per_binary_search", required_argument, 0, 'N'},
@@ -59,7 +59,7 @@ static inline void print_timestamp() {
     }
 }
 
-int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show_perf_counters) {
+int do_throughput(int buffer_size_KiB, int num_iter, int batch_size_MiB, bool show_perf_counters) {
     double* res = (double*)malloc(sizeof(double) * num_iter);
 
 #if defined(TIMING_WITH_CPU_CYCLES)
@@ -67,7 +67,7 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show
 #elif defined(TIMING_WITH_RDTSC)
     const char* thp_unit = "byte/cycle(TSC)";
 #elif defined(TIMING_WITH_CLOCK_GETTIME)
-    const char* thp_unit = "GBps";
+    const char* thp_unit = "GiB/s";
 #endif
 
     // boost_cpu
@@ -75,10 +75,10 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show
 
     std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
     // read
-    if(sequential_throughput(NULL, ((size_t)buffer_size_kb) << 10,
+    if(sequential_throughput(NULL, ((size_t)buffer_size_KiB) << 10,
                              num_iter, res,
                              lpcs,
-                             0, ((uint64_t)batch_size_mb) << 20)) {
+                             0, ((uint64_t)batch_size_MiB) << 20)) {
         fprintf(stderr, "experiment failed...\n");
     }
 
@@ -106,10 +106,10 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show
 
     // write
     lpcs->clear();
-    if(sequential_throughput(NULL, ((size_t)buffer_size_kb) << 10,
+    if(sequential_throughput(NULL, ((size_t)buffer_size_KiB) << 10,
                              num_iter, res,
                              lpcs,
-                             1, ((uint64_t)batch_size_mb) << 20)) {
+                             1, ((uint64_t)batch_size_MiB) << 20)) {
         fprintf(stderr, "experiment failed...\n");
     }
 
@@ -135,7 +135,7 @@ int do_throughput(int buffer_size_kb, int num_iter, int batch_size_mb, bool show
     }
 }
 
-int do_cachesize(const uint32_t cache_size_hint_KB,
+int do_cachesize(const uint32_t cache_size_hint_KiB,
                  const double upper_read_thp,
                  const double lower_read_thp,
                  const int num_data_points,
@@ -148,24 +148,24 @@ int do_cachesize(const uint32_t cache_size_hint_KB,
     assert(lower_read_thp > 0.0);
     assert(num_data_points > 0);
 
-    int ret = eval_cache_size(cache_size_hint_KB, upper_read_thp, lower_read_thp, css, num_data_points, is_write, search_depth, num_of_thp_dps_per_binary_search, ((uint64_t)batch_size) << 20);
+    int ret = eval_cache_size(cache_size_hint_KiB, upper_read_thp, lower_read_thp, css, num_data_points, is_write, search_depth, num_of_thp_dps_per_binary_search, ((uint64_t)batch_size) << 20);
     if(ret) {
         fprintf(stderr, "failed...\n");
         return ret;
     }
     for(int i = 0; i < num_data_points; i++) {
-        printf("[%d]\t%dKB\n", i, css[i]);
+        printf("[%d]\t%dKiB\n", i, css[i]);
     }
     return ret;
 }
 
-int do_latency(const int buffer_size_kb,
+int do_latency(const int buffer_size_KiB,
                const int num_datapoints,
                const bool show_perf_counters) {
     double* latencies = (double*)malloc(sizeof(double) * num_datapoints);
     std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
 
-    random_latency(((int64_t)buffer_size_kb << 10), num_datapoints, latencies, lpcs);
+    random_latency(((int64_t)buffer_size_KiB << 10), num_datapoints, latencies, lpcs);
 
 #if defined(TIMING_WITH_CPU_CYCLES)
     const char* lat_unit = "cycles(CPU)";
@@ -199,13 +199,13 @@ int do_latency(const int buffer_size_kb,
 int main(int argc, char** argv) {
     int c;
     int option_index = 0;
-    int buffer_size_kb = 0;
+    int buffer_size_KiB = 0;
     int num_datapoints = 0;
-    int batch_size_mb = (1 << 8);
+    int batch_size_MiB = (1 << 8);
     enum CMExp exp = EXP_HELP;
     double upper_read_thp = 0.0f;
     double lower_read_thp = 0.0f;
-    uint32_t cache_size_hint_KB = 10240;
+    uint32_t cache_size_hint_KiB = 10240;
     int32_t search_depth = 11;
     int32_t num_of_thp_dps_per_binary_search = 5;
     int nloop = 1;
@@ -229,7 +229,7 @@ int main(int argc, char** argv) {
                 break;
 
             case 's':
-                buffer_size_kb = atoi(optarg);
+                buffer_size_KiB = atoi(optarg);
                 break;
 
             case 'L':
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
                 break;
 
             case 'S':
-                batch_size_mb = atoi(optarg);
+                batch_size_MiB = atoi(optarg);
                 break;
 
             case 'l':
@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
                 break;
 
             case 'c':
-                cache_size_hint_KB = (uint32_t)atoi(optarg);
+                cache_size_hint_KiB = (uint32_t)atoi(optarg);
                 break;
 
             case 'd':
@@ -281,36 +281,36 @@ int main(int argc, char** argv) {
         case EXP_THROUGHPUT:
             fprintf(stderr, "=== Throughput Test ===\n");
             fprintf(stderr, "nloop:\t%d\n", nloop);
-            fprintf(stderr, "buffer_size_kb:\t%d\n", buffer_size_kb);
+            fprintf(stderr, "buffer_size_KiB:\t%d\n", buffer_size_KiB);
             fprintf(stderr, "num_datapoints:\t%d\n", num_datapoints);
-            fprintf(stderr, "batch_size_mb:\t%d\n", batch_size_mb);
+            fprintf(stderr, "batch_size_MiB:\t%d\n", batch_size_MiB);
             while(nloop--)
-                do_throughput(buffer_size_kb, num_datapoints, batch_size_mb, show_perf_counters);
+                do_throughput(buffer_size_KiB, num_datapoints, batch_size_MiB, show_perf_counters);
             break;
 
         case EXP_CACHESIZE:
             fprintf(stderr, "=== Cache Size Test ===\n");
             fprintf(stderr, "nloop:\t%d\n", nloop);
-            fprintf(stderr, "cache_size_hint_KB:\t%d\n", cache_size_hint_KB);
+            fprintf(stderr, "cache_size_hint_KiB:\t%d\n", cache_size_hint_KiB);
             fprintf(stderr, "upper_read_thp:\t%f\n", upper_read_thp);
             fprintf(stderr, "lower_read_thp:\t%f\n", lower_read_thp);
             fprintf(stderr, "num_datapoints:\t%d\n", num_datapoints);
-            fprintf(stderr, "batch_size_mb:\t%d\n", batch_size_mb);
+            fprintf(stderr, "batch_size_MiB:\t%d\n", batch_size_MiB);
             fprintf(stderr, "search_depth:\t%d\n", search_depth);
             fprintf(stderr, "num_of_thp_dps_per_binary_search:\t%d\n", num_of_thp_dps_per_binary_search);
             while(nloop--) {
                 // print_timestamp();
-                do_cachesize(cache_size_hint_KB, upper_read_thp, lower_read_thp, num_datapoints, batch_size_mb, false, search_depth, num_of_thp_dps_per_binary_search);
+                do_cachesize(cache_size_hint_KiB, upper_read_thp, lower_read_thp, num_datapoints, batch_size_MiB, false, search_depth, num_of_thp_dps_per_binary_search);
             }
             break;
 
         case EXP_LATENCY:
             fprintf(stderr, "=== Latency Test ===\n");
             fprintf(stderr, "nloop:\t%d\n", nloop);
-            fprintf(stderr, "buffer_size_kb:\t%d\n", buffer_size_kb);
+            fprintf(stderr, "buffer_size_KiB:\t%d\n", buffer_size_KiB);
             fprintf(stderr, "num_datapoints:\t%d\n", num_datapoints);
             while(nloop--) {
-                do_latency(buffer_size_kb, num_datapoints, show_perf_counters);
+                do_latency(buffer_size_KiB, num_datapoints, show_perf_counters);
             }
             break;
         default:;
