@@ -86,24 +86,25 @@ int do_throughput(int buffer_size_KiB, int num_iter, int batch_size_MiB, bool sh
            average(num_iter, res), thp_unit, deviation(num_iter, res),
            minimum(num_iter, res), maximum(num_iter, res));
 
-    std::cout << std::left << std::setw(32) << "throughput per iter";
-    if(lpcs.has_value() && show_perf_counters) {
-        for(auto itr = (*lpcs)[0].begin(); itr != (*lpcs)[0].end(); itr++) {
-            std::cout << std::left << std::setw(16) << itr->first;
-        }
-    }
-    printf("\n");
-
-    for(int i = 0; i < num_iter; i++) {
-        printf("[%d]-%.3f %s\t", i, res[i], thp_unit);
-        if(lpcs.has_value() && show_perf_counters) {
-            for(auto itr = (*lpcs)[i].begin(); itr != (*lpcs)[i].end(); itr++) {
-                std::cout << std::left << std::setw(16) << itr->second;
+    if (show_perf_counters) {
+        std::cout << std::left << std::setw(32) << "throughput per iter";
+        if(lpcs.has_value()) {
+            for(auto itr = (*lpcs)[0].begin(); itr != (*lpcs)[0].end(); itr++) {
+                std::cout << std::left << std::setw(16) << itr->first;
             }
         }
         printf("\n");
+    
+        for(int i = 0; i < num_iter; i++) {
+            printf("[%d]-%.3f %s\t", i, res[i], thp_unit);
+            if(lpcs.has_value()) {
+                for(auto itr = (*lpcs)[i].begin(); itr != (*lpcs)[i].end(); itr++) {
+                    std::cout << std::left << std::setw(16) << itr->second;
+                }
+            }
+            printf("\n");
+        }
     }
-
     // write
     lpcs->clear();
     if(sequential_throughput(NULL, ((size_t)buffer_size_KiB) << 10,
@@ -117,21 +118,23 @@ int do_throughput(int buffer_size_KiB, int num_iter, int batch_size_MiB, bool sh
            average(num_iter, res), thp_unit, deviation(num_iter, res),
            minimum(num_iter, res), maximum(num_iter, res));
 
-    std::cout << std::left << std::setw(32) << "thoughput per iter";
-    if(lpcs.has_value() && show_perf_counters) {
-        for(auto itr = (*lpcs)[0].begin(); itr != (*lpcs)[0].end(); itr++) {
-            std::cout << std::left << std::setw(16) << itr->first;
-        }
-    }
-    printf("\n");
-    for(int i = 0; i < num_iter; i++) {
-        printf("[%d]-%.3f %s\t", i, res[i], thp_unit);
-        if(lpcs.has_value() && show_perf_counters) {
-            for(auto itr = (*lpcs)[i].begin(); itr != (*lpcs)[i].end(); itr++) {
-                std::cout << std::left << std::setw(16) << itr->second;
+    if (show_perf_counters) {
+        std::cout << std::left << std::setw(32) << "thoughput per iter";
+        if(lpcs.has_value()) {
+            for(auto itr = (*lpcs)[0].begin(); itr != (*lpcs)[0].end(); itr++) {
+                std::cout << std::left << std::setw(16) << itr->first;
             }
         }
         printf("\n");
+        for(int i = 0; i < num_iter; i++) {
+            printf("[%d]-%.3f %s\t", i, res[i], thp_unit);
+            if(lpcs.has_value()) {
+                for(auto itr = (*lpcs)[i].begin(); itr != (*lpcs)[i].end(); itr++) {
+                    std::cout << std::left << std::setw(16) << itr->second;
+                }
+            }
+            printf("\n");
+        }
     }
 }
 

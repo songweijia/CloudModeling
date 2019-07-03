@@ -19,7 +19,7 @@ rm -rf ${OUTPUT}
 NDP=`cat bs | wc -l`
 for bs in `cat bs`
 do
-  sudo taskset -c ${CORE_ID} ../ci -e throughput -s ${bs} -n 32 -S 128 | grep WRITE | awk -v bs=$bs '{print $9" "bs}' >> ${OUTPUT}
+  sudo taskset -c ${CORE_ID} ../ci -e throughput -s ${bs} -n 32 -S 128 | grep READ | awk -v bs=$bs '{print $9" "bs}' >> ${OUTPUT}
 done
 
 cat ${OUTPUT} | awk '{print $1}' >> ${THPDAT}
@@ -36,18 +36,18 @@ CS=(`cat profile.thp`)
 for((i=0;i<${#CSH[@]};i++))
 do
   let l=$i+1
-  buffer_size=`sudo taskset -c ${CORE_ID} ../ci -e cachesize -S 128 -u ${CS[$i]} -l ${CS[$l]} -c ${CSH[$i]} -n 1 -N 10 | head -1 | awk '{print $2}' | sed 's/KB//'`
+  buffer_size=`sudo taskset -c ${CORE_ID} ../ci -e cachesize -S 128 -u ${CS[$i]} -l ${CS[$l]} -c ${CSH[$i]} -n 1 -N 10 | head -1 | awk '{print $2}' | sed 's/KiB//'`
   test_buffer_size=`expr ${buffer_size} \* 4 \/ 5`
   echo ${buffer_size} >> profile.cs
   # test_buffer_size=$buffer_size
   # sudo taskset -c ${CORE_ID} ./rr_lat ${test_buffer_size} 20 | awk '{SUM+=$3} END {print SUM / NR " ns"}' >> profile.lat
-  sudo taskset -c ${CORE_ID} ../ci -e latency -s ${test_buffer_size} -n 200 | awk '{SUM+=$4}END{print SUM/NR " ns"}' >> profile.lat
+  sudo taskset -c ${CORE_ID} ../ci -e latency -s ${test_buffer_size} -n 200 | sed 's/-/ /g' | awk '{SUM+=$2}END{print SUM/NR}' >> profile.lat
 done
 
-buffer_size=`sudo taskset -c ${CORE_ID} ../ci -e cachesize -S 128 -u ${CS[-2]} -l ${CS[-1]} -c ${CSH[-1]} -n 1 -N 10 | tail -1 | awk '{print $2}' | sed 's/KB//'`
+buffer_size=`sudo taskset -c ${CORE_ID} ../ci -e cachesize -S 128 -u ${CS[-2]} -l ${CS[-1]} -c ${CSH[-1]} -n 1 -N 10 | tail -1 | awk '{print $2}' | sed 's/KiB//'`
 test_buffer_size=`expr ${buffer_size} \* 5`
 # sudo taskset -c ${CORE_ID} ./rr_lat ${test_buffer_size} 20 | awk '{SUM+=$3} END {print SUM / NR " ns"}' >> profile.lat
-sudo taskset -c ${CORE_ID} ../ci -e latency -s ${test_buffer_size} -n 5 | awk '{SUM+=$4}END{print SUM/NR " ns"}' >> profile.lat
+sudo taskset -c ${CORE_ID} ../ci -e latency -s ${test_buffer_size} -n 5 | sed 's/-/ /g' | awk '{SUM+=$2}END{print SUM/NR}' >> profile.lat
 
 LAT_TIME=`date +%s`
 
