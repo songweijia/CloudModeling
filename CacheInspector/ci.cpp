@@ -8,6 +8,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <config.h>
 #include "cache_size.hpp"
 #include "rand_lat.hpp"
 #include "seq_thp.hpp"
@@ -136,6 +137,7 @@ int do_throughput(int buffer_size_KiB, int num_iter, int batch_size_MiB, bool sh
             printf("\n");
         }
     }
+    return 0;
 }
 
 int do_cachesize(const uint32_t cache_size_hint_KiB,
@@ -197,6 +199,7 @@ int do_latency(const int buffer_size_KiB,
     }
 
     free((void*)latencies);
+    return 0;
 }
 
 int main(int argc, char** argv) {

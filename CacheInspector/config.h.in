@@ -1,0 +1,3 @@
+#cmakedefine TIMING_WITH_CLOCK_GETTIME 1
+#cmakedefine TIMING_WITH_RDTSC 0
+#cmakedefine TIMING_WITH_CPU_CYCLE 0

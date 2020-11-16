@@ -1,14 +1,9 @@
-#include "seq_thp.hpp"
-#include "rdtsc.hpp"
-#include "util.hpp"
 #include <assert.h>
 #include <errno.h>
 #include <iostream>
 #include <sched.h>
 #include <stdlib.h>
 #include <time.h>
-
-#include "linux_perf_counters.hpp"
 #include <optional>
 
 #if USE_HUGEPAGE
@@ -20,6 +15,14 @@
 #define PROTECTION (PROT_READ | PROT_WRITE)
 #define FLAGS (MAP_SHARED)
 #endif
+
+#include <config.h>
+
+#include "linux_perf_counters.hpp"
+#include "seq_thp.hpp"
+#include "rdtsc.hpp"
+#include "util.hpp"
+
 
 extern int32_t volatile sequential_throughput(
         void* buffer,
@@ -34,11 +37,9 @@ extern int32_t volatile sequential_throughput(
     assert(buffer_size > 0);
 
     int ret = 0;
-#ifdef TIMING_WITH_CLOCK_GETTIME
+#if TIMING_WITH_CLOCK_GETTIME
     struct timespec ts, te;
-#endif
-
-#ifdef TIMING_WITH_RDTSC
+#elif TIMING_WITH_RDTSC
     uint64_t ts, te;
 #endif
     uint64_t iter_per_iter = (bytes_per_iter + buffer_size - 1) / buffer_size;
@@ -88,12 +89,10 @@ extern int32_t volatile sequential_throughput(
         LinuxPerfCounters lpcs;
 
         // STEP 4 - start the timer
-#ifdef TIMING_WITH_CLOCK_GETTIME
+#if TIMING_WITH_CLOCK_GETTIME
         ret = clock_gettime(CLOCK_REALTIME, &ts);
         RETURN_ON_ERROR(ret, "clock_gettime");
-#endif
-
-#ifdef TIMING_WITH_RDTSC
+#elif TIMING_WITH_RDTSC
         ts = rdtsc();
 #endif
 
@@ -497,23 +496,21 @@ extern int32_t volatile sequential_throughput(
         }
 
         // STEP 6 - end the timer
-#ifdef TIMING_WITH_CLOCK_GETTIME
+#if TIMING_WITH_CLOCK_GETTIME
         ret = clock_gettime(CLOCK_REALTIME, &te);
         RETURN_ON_ERROR(ret, "clock_gettime");
-#endif
-
-#ifdef TIMING_WITH_RDTSC
+#elif TIMING_WITH_RDTSC
         te = rdtsc();
 #endif
 
         lpcs.stop_perf_events();
 
         // STEP 7 - calculate throguhput
-#ifdef TIMING_WITH_CPU_CYCLES
+#if TIMING_WITH_CPU_CYCLES
         results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
-#elif defined(TIMING_WITH_RDTSC)
+#elif TIMING_WITH_RDTSC
         results[iter] = THROUGHPUT_BYTES_PER_CYCLE((iter_per_iter)*buffer_size, ts, te);
-#elif defined(TIMING_WITH_CLOCK_GETTIME)
+#elif TIMING_WITH_CLOCK_GETTIME
         results[iter] = THROUGHPUT_GiBPS((iter_per_iter)*buffer_size, ts, te);
 #else
 #error Timing facility not specified, please define either TIMING_WITH_CLOCK_GETTIME, TIMEING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.

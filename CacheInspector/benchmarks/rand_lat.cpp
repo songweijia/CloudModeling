@@ -1,5 +1,3 @@
-#include "rand_lat.hpp"
-#include "linux_perf_counters.hpp"
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
@@ -10,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <config.h>
+#include "rand_lat.hpp"
+#include "linux_perf_counters.hpp"
 
 static uint64_t rx = 123456789L;
 static uint64_t ry = 362436069L;
@@ -77,13 +78,13 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     LinuxPerfCounters lpcs;
     lpcs.start_perf_events();
 
-#if defined(TIMING_WITH_CLOCK_GETTIME)
+#if TIMING_WITH_CLOCK_GETTIME
     struct timespec t1, t2;
     if(clock_gettime(CLOCK_MONOTONIC, &t1) < 0) {
         fprintf(stderr, "failed to call clock_gettime().\n");
         return 0.0f;
     }
-#elif defined(TIMING_WITH_RDTSC)
+#elif TIMING_WITH_RDTSC
     uint64_t t1, t2;
     t1 = rdtsc();
 #endif
@@ -229,15 +230,16 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
             : "m"(num), "m"(cll)
             : "rax", "rbx");
 
-#if defined(TIMING_WITH_CLOCK_GETTIME)
+#if TIMING_WITH_CLOCK_GETTIME
     if(clock_gettime(CLOCK_MONOTONIC, &t2) < 0) {
         fprintf(stderr, "failed to call clock_gettime().\n");
         return 0.0f;
     }
-#elif defined(TIMING_WITH_RDTSC)
+#elif TIMING_WITH_RDTSC
     t2 = rdtsc();
-#elif defined(TIMING_WITH_CPU_CYCLES)
+#elif TIMING_WITH_CPU_CYCLES
 #else
+#error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
 #endif
 
     lpcs.stop_perf_events();
@@ -247,11 +249,11 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     }
 
     double ret = 0.0f;
-#if defined(TIMING_WITH_CLOCK_GETTIME)
+#if TIMING_WITH_CLOCK_GETTIME
     ret = static_cast<double>(t2.tv_sec - t1.tv_sec) * 1e9 + static_cast<double>(t2.tv_nsec - t1.tv_nsec);
-#elif defined(TIMING_WITH_RDTSC)
+#elif TIMING_WITH_RDTSC
     ret = static_cast<double>(t2 - t1);
-#elif defined(TIMING_WITH_CPU_CYCLES)
+#elif TIMING_WITH_CPU_CYCLES
     ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
 #else
 #error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.

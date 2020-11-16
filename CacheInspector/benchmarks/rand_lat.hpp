@@ -2,6 +2,7 @@
 #include <map>
 #include <optional>
 #include <vector>
+#include <string>
 
 void random_latency(int64_t buffer_size, int num_points, double* output, std::optional<std::vector<std::map<std::string, long long>>>& counters);
 

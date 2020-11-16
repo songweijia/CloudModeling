@@ -1,11 +1,10 @@
-#ifndef _SEQ_THP_HPP_
-#define _SEQ_THP_HPP_
-
+#pragma once
 #include <inttypes.h>
 #include <map>
 #include <optional>
 #include <stdio.h>
 #include <vector>
+#include <string>
 
 /**
  * microbenchmark: sequential_throughput measurement
@@ -35,4 +34,3 @@ extern volatile int32_t sequential_throughput(
         const uint64_t num_iter_warmup = 5,
         const size_t buf_alignment = (1ull << 12));
 
-#endif  //SEQ_THP
