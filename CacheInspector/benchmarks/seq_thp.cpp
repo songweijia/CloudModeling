@@ -145,6 +145,44 @@ extern int32_t volatile sequential_throughput(
                     "js      done_write%= \n\t"
                     "movq    %%rax, %%rdx \n"
                     "write_next1k%=: \n\t"
+#if HAS_AVX2 || HAS_AVX
+                    // using AVX/AVX2 instruction
+                    // There are 16 256bit registers: YMM0-YMM15
+                    // start writing
+                    "vmovdqu %%ymm0, 0(%%rdx) \n\t"
+                    "vmovdqu %%ymm1, 32(%%rdx) \n\t"
+                    "vmovdqu %%ymm2, 64(%%rdx) \n\t"
+                    "vmovdqu %%ymm3, 96(%%rdx) \n\t"
+                    "vmovdqu %%ymm4, 128(%%rdx) \n\t"
+                    "vmovdqu %%ymm5, 160(%%rdx) \n\t"
+                    "vmovdqu %%ymm6, 192(%%rdx) \n\t"
+                    "vmovdqu %%ymm7, 224(%%rdx) \n\t"
+                    "vmovdqu %%ymm8, 256(%%rdx) \n\t"
+                    "vmovdqu %%ymm9, 288(%%rdx) \n\t"
+                    "vmovdqu %%ymm10, 320(%%rdx) \n\t"
+                    "vmovdqu %%ymm11, 352(%%rdx) \n\t"
+                    "vmovdqu %%ymm12, 384(%%rdx) \n\t"
+                    "vmovdqu %%ymm13, 416(%%rdx) \n\t"
+                    "vmovdqu %%ymm14, 448(%%rdx) \n\t"
+                    "vmovdqu %%ymm15, 480(%%rdx) \n\t"
+                    "vmovdqu %%ymm0, 512(%%rdx) \n\t"
+                    "vmovdqu %%ymm1, 544(%%rdx) \n\t"
+                    "vmovdqu %%ymm2, 576(%%rdx) \n\t"
+                    "vmovdqu %%ymm3, 608(%%rdx) \n\t"
+                    "vmovdqu %%ymm4, 640(%%rdx) \n\t"
+                    "vmovdqu %%ymm5, 672(%%rdx) \n\t"
+                    "vmovdqu %%ymm6, 704(%%rdx) \n\t"
+                    "vmovdqu %%ymm7, 736(%%rdx) \n\t"
+                    "vmovdqu %%ymm8, 768(%%rdx) \n\t"
+                    "vmovdqu %%ymm9, 800(%%rdx) \n\t"
+                    "vmovdqu %%ymm10, 832(%%rdx) \n\t"
+                    "vmovdqu %%ymm11, 864(%%rdx) \n\t"
+                    "vmovdqu %%ymm12, 896(%%rdx) \n\t"
+                    "vmovdqu %%ymm13, 928(%%rdx) \n\t"
+                    "vmovdqu %%ymm14, 960(%%rdx) \n\t"
+                    "vmovdqu %%ymm15, 992(%%rdx) \n\t"
+                    // end writing
+#else
                     // start writing
                     "movq    %%r8, 0(%%rdx) \n\t"
                     "movq    %%r9, 8(%%rdx) \n\t"
@@ -275,6 +313,7 @@ extern int32_t volatile sequential_throughput(
                     "movq    %%r14, 1008(%%rdx) \n\t"
                     "movq    %%r15, 1016(%%rdx) \n\t"
                     // end of writing
+#endif
                     "addq    $1024, %%rdx \n\t"
                     "cmpq    %%rdx, %%rbx \n\t"
                     "je      write_rewind%= \n\t"
@@ -337,7 +376,45 @@ extern int32_t volatile sequential_throughput(
                     "js      done_read%= \n\t"
                     "movq    %%rax, %%rdx \n"
                     "read_next1k%=: \n\t"
-                    // start writing
+#if HAS_AVX2 || HAS_AVX
+                    // using AVX/AVX2 instruction
+                    // There are 16 256bit registers: YMM0-YMM15
+                    // start reading
+                    "vmovdqu   0(%%rdx), %%ymm0 \n\t"
+                    "vmovdqu  32(%%rdx), %%ymm1 \n\t"
+                    "vmovdqu  64(%%rdx), %%ymm2 \n\t"
+                    "vmovdqu  96(%%rdx), %%ymm3 \n\t"
+                    "vmovdqu 128(%%rdx), %%ymm4 \n\t"
+                    "vmovdqu 160(%%rdx), %%ymm5 \n\t"
+                    "vmovdqu 192(%%rdx), %%ymm6 \n\t"
+                    "vmovdqu 224(%%rdx), %%ymm7 \n\t"
+                    "vmovdqu 256(%%rdx), %%ymm8 \n\t"
+                    "vmovdqu 288(%%rdx), %%ymm9 \n\t"
+                    "vmovdqu 320(%%rdx), %%ymm10 \n\t"
+                    "vmovdqu 352(%%rdx), %%ymm11 \n\t"
+                    "vmovdqu 384(%%rdx), %%ymm12 \n\t"
+                    "vmovdqu 416(%%rdx), %%ymm13 \n\t"
+                    "vmovdqu 448(%%rdx), %%ymm14 \n\t"
+                    "vmovdqu 480(%%rdx), %%ymm15 \n\t"
+                    "vmovdqu 512(%%rdx), %%ymm0 \n\t"
+                    "vmovdqu 544(%%rdx), %%ymm1 \n\t"
+                    "vmovdqu 576(%%rdx), %%ymm2 \n\t"
+                    "vmovdqu 608(%%rdx), %%ymm3 \n\t"
+                    "vmovdqu 640(%%rdx), %%ymm4 \n\t"
+                    "vmovdqu 672(%%rdx), %%ymm5 \n\t"
+                    "vmovdqu 704(%%rdx), %%ymm6 \n\t"
+                    "vmovdqu 736(%%rdx), %%ymm7 \n\t"
+                    "vmovdqu 768(%%rdx), %%ymm8 \n\t"
+                    "vmovdqu 800(%%rdx), %%ymm9 \n\t"
+                    "vmovdqu 832(%%rdx), %%ymm10 \n\t"
+                    "vmovdqu 864(%%rdx), %%ymm11 \n\t"
+                    "vmovdqu 896(%%rdx), %%ymm12 \n\t"
+                    "vmovdqu 928(%%rdx), %%ymm13 \n\t"
+                    "vmovdqu 960(%%rdx), %%ymm14 \n\t"
+                    "vmovdqu 992(%%rdx), %%ymm15 \n\t"
+                    // end reading
+#else
+                    // start reading
                     "movq    0(%%rdx), %%r8 \n\t"
                     "movq    8(%%rdx), %%r9 \n\t"
                     "movq    16(%%rdx), %%r10 \n\t"
@@ -466,7 +543,8 @@ extern int32_t volatile sequential_throughput(
                     "movq    1000(%%rdx), %%r13 \n\t"
                     "movq    1008(%%rdx), %%r14 \n\t"
                     "movq    1016(%%rdx), %%r15 \n\t"
-                    // end of writing
+                    // end of reading
+#endif
                     "addq    $1024, %%rdx \n\t"
                     "cmpq    %%rdx, %%rbx \n\t"
                     "je      read_rewind%= \n\t"

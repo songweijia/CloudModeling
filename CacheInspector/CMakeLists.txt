@@ -19,6 +19,26 @@ set(CMAKE_CXX_FLAGS_RELEASE "-Wall")
 set(TIMING_WITH_CLOCK_GETTIME 1)
 set(TIMING_WITH_RDTSC 0)
 set(TIMING_WITH_CPU_CYCLE 0)
+execute_process(COMMAND lscpu
+                COMMAND grep -o "avx2\\s"
+                RESULT_VARIABLE TEST_AVX2)
+execute_process(COMMAND lscpu
+                COMMAND grep -o "avx\\s"
+                RESULT_VARIABLE TEST_AVX)
+
+if (${TEST_AVX2} EQUAL 0)
+    set(HAS_AVX2 1)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mavx2")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx2")
+elseif (${TEST_AVX} EQUAL 0)
+    set(HAS_AVX 1)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mavx")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx")
+endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h)
 
