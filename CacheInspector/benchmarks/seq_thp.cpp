@@ -182,6 +182,25 @@ extern int32_t volatile sequential_throughput(
                     "vmovdqu %%ymm14, 960(%%rdx) \n\t"
                     "vmovdqu %%ymm15, 992(%%rdx) \n\t"
                     // end writing
+#elif HAS_AVX512
+                    // start writing
+                    "vmovdqu8 %%zmm0,   0(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm1,  64(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm2, 128(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm3, 192(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm4, 256(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm5, 320(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm6, 384(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm7, 448(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm8, 512(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm9, 576(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm10, 640(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm11, 704(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm12, 768(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm13, 832(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm14, 896(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm15, 960(%%rdx) \n\t"
+                    // end writing
 #else
                     // start writing
                     "movq    %%r8, 0(%%rdx) \n\t"
@@ -412,6 +431,25 @@ extern int32_t volatile sequential_throughput(
                     "vmovdqu 928(%%rdx), %%ymm13 \n\t"
                     "vmovdqu 960(%%rdx), %%ymm14 \n\t"
                     "vmovdqu 992(%%rdx), %%ymm15 \n\t"
+                    // end reading
+#elif HAS_AVX512
+                    // start reading
+                    "vmovdqu8   0(%%rdx), %%zmm0 \n\t"
+                    "vmovdqu8  64(%%rdx), %%zmm1 \n\t"
+                    "vmovdqu8 128(%%rdx), %%zmm2 \n\t"
+                    "vmovdqu8 192(%%rdx), %%zmm3 \n\t"
+                    "vmovdqu8 256(%%rdx), %%zmm4 \n\t"
+                    "vmovdqu8 320(%%rdx), %%zmm5 \n\t"
+                    "vmovdqu8 384(%%rdx), %%zmm6 \n\t"
+                    "vmovdqu8 448(%%rdx), %%zmm7 \n\t"
+                    "vmovdqu8 512(%%rdx), %%zmm8 \n\t"
+                    "vmovdqu8 576(%%rdx), %%zmm9 \n\t"
+                    "vmovdqu8 640(%%rdx), %%zmm10 \n\t"
+                    "vmovdqu8 704(%%rdx), %%zmm11 \n\t"
+                    "vmovdqu8 768(%%rdx), %%zmm12 \n\t"
+                    "vmovdqu8 832(%%rdx), %%zmm13 \n\t"
+                    "vmovdqu8 896(%%rdx), %%zmm14 \n\t"
+                    "vmovdqu8 960(%%rdx), %%zmm15 \n\t"
                     // end reading
 #else
                     // start reading

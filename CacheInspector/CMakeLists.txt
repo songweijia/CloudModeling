@@ -10,8 +10,8 @@ set(cacheinspector_build_version 0.9.1)
 # CFLAGS
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS "-O3")
-set(CMAKE_CXX_FLAGS "-fPIC -O3")
+set(CMAKE_C_FLAGS "-O3 -march=native")
+set(CMAKE_CXX_FLAGS "-fPIC -O3 -march=native")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -ggdb -gdwarf-3")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall")
 
@@ -25,19 +25,16 @@ execute_process(COMMAND lscpu
 execute_process(COMMAND lscpu
                 COMMAND grep -o "avx\\s"
                 RESULT_VARIABLE TEST_AVX)
+execute_process(COMMAND lscpu
+                COMMAND grep -o "avx512"
+                RESULT_VARIABLE TEST_AVX512)
 
-if (${TEST_AVX2} EQUAL 0)
+if (${TEST_AVX512} EQUAL 0)
+    set(HAS_AVX512 1)
+elseif (${TEST_AVX2} EQUAL 0)
     set(HAS_AVX2 1)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx2")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mavx2")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx2")
 elseif (${TEST_AVX} EQUAL 0)
     set(HAS_AVX 1)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mavx")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -mavx")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -mavx")
 endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h)
