@@ -1,6 +1,3 @@
-#include "cache_size.hpp"
-#include "seq_thp.hpp"
-#include "util.hpp"
 #include <stdlib.h>
 
 #if USE_HUGEPAGE
@@ -9,9 +6,13 @@
 #include <unistd.h>
 #endif
 
+#include <ci/cache_size.hpp>
+#include <ci/seq_thp.hpp>
+#include <ci/util.hpp>
+
 #define BUFFER_ALIGNMENT (4096)
 #define MEM_ALLOCATION (256ull << 20)
-
+namespace cacheinspector {
 static int32_t binary_search(
 #ifdef LOG_BINARY_SEARCH
         int32_t* bs_log,
@@ -194,3 +195,5 @@ int eval_cache_size(
 
     return ret;
 }
+
+}//cacheinspector

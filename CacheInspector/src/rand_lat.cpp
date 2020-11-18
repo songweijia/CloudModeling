@@ -8,9 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <config.h>
-#include "rand_lat.hpp"
-#include "linux_perf_counters.hpp"
+#include <ci/config.h>
+#include <ci/rand_lat.hpp>
+#include <ci/linux_perf_counters.hpp>
 
 static uint64_t rx = 123456789L;
 static uint64_t ry = 362436069L;

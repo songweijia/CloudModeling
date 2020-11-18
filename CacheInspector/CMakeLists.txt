@@ -37,14 +37,24 @@ elseif (${TEST_AVX} EQUAL 0)
     set(HAS_AVX 1)
 endif()
 
-CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h)
+CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/include/ci/config.h.in ${CMAKE_BINARY_DIR}/include/ci/config.h)
 
-add_subdirectory(benchmarks)
-
-add_executable(ci ci.cpp)
-target_include_directories(ci PRIVATE
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/benchmarks>
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
+add_library(ci STATIC
+    src/seq_thp.cpp
+    src/cache_size.cpp
+    src/rand_lat.cpp
+#   src/rr_lat.c
+    src/linux_perf_counters.cpp
 )
-target_link_libraries(ci benchmarks)
+target_include_directories(ci PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+)
+
+add_executable(ci-bin src/ci.cpp)
+target_include_directories(ci-bin PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+)
+target_link_libraries(ci-bin ci)
+set_target_properties(ci-bin PROPERTIES OUTPUT_NAME ci)

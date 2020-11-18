@@ -1,8 +1,7 @@
-#ifndef _CACHE_SIZE_HPP_
-#define _CACHE_SIZE_HPP_
+#pragma once
 
 #include <inttypes.h>
-
+namespace cacheinspector {
 /**
  * evaluate the cache size for a given instance
  * @param cache_size_hint_KiB
@@ -41,5 +40,4 @@ extern int eval_cache_size(
         const int32_t search_depth = 10,
         const uint32_t num_iter_per_sample = 5,
         const uint64_t num_bytes_per_iter = (1ull << 28));
-
-#endif  //__CACHE_SIZE_HPP_
+}// namespace cacheinspector

@@ -14,6 +14,8 @@
 #include "seq_thp.hpp"
 #include "util.hpp"
 
+using namespace cacheinspector;
+
 #define HELP_INFO                                                                  \
     "CacheInspector benchmark\n"                                                   \
     "--(e)xperiment throughput|latency|cachesize\n"                                \
