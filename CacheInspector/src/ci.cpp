@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,8 +107,92 @@ struct parsed_args {
     }
 };
 
+static void show_perf_counters(const std::string& series_name, double res[], std::vector<std::map<std::string, long long>>& lpcs) {
+    if (lpcs.empty() || lpcs[0].empty()) {
+        return;
+    }
+    // titles
+    std::cout << std::left << std::setw(32) << series_name;
+    for (const auto& kv:lpcs[0]) {
+        std::cout << std::left << std::setw(16) << kv.first;
+    }
+    std::cout << std::endl;
+    // data points
+    uint32_t idx = 0;
+    for (const auto& row:lpcs) {
+        std::cout << std::left << std::setw(32) << res[idx];
+        for (const auto& kv:row) {
+            std::cout << std::left << std::setw(16) << kv.second;
+        }
+        std::cout << std::endl;
+    }
+}
+
+static void run_seq_thp(const struct parsed_args& pargs) {
+    double res[pargs.num_datapoints];
+    std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
+#if TIMING_WITH_CPU_CYCLES
+    const char* thp_unit = "byte/cycle(CPU)";
+#elif TIMING_WITH_RDTSC
+    const char* thp_unit = "byte/cycle(TSC)";
+#elif TIMING_WITH_CLOCK_GETTIME
+    const char* thp_unit = "GiB/s";
+#endif
+    //verify arguments
+    if (strcmp(pargs.cmd_name,OPT_SEQ_THP)!=0) {
+        std::cerr << "command:" << pargs.cmd_name << " is not " << OPT_SEQ_THP << std::endl;
+        return;
+    }
+    if (pargs.buffer_size_kbytes == 0) {
+        std::cerr << OPT_BUF_SIZE << " must be greater than 0." << std::endl;
+        return;
+    }
+    if (pargs.num_datapoints == 0) {
+        std::cerr << OPT_NUM_DPS << " must be greater than 0." << std::endl;
+        return;
+    }
+    if (pargs.total_size_mbytes == 0) {
+        std::cerr << OPT_TOT_SIZE << " must be greater than 0." << std::endl;
+        return;
+    }
+
+    //warm up CPU
+    boost_cpu();
+
+    // read
+    if (sequential_throughput(NULL,
+                              pargs.buffer_size_kbytes<<10,
+                              pargs.num_datapoints,
+                              res,lpcs,0,pargs.total_size_mbytes<<20)) {
+        std::cerr << "read throughput test failed in " << __func__ << std::endl; 
+        return;
+    } else {
+        fprintf(stdout,"\nREAD %.3f %s std %.3f min %.3f max %.3f\n",
+                average(pargs.num_datapoints, res), thp_unit, deviation(pargs.num_datapoints, res),
+                minimum(pargs.num_datapoints, res), maximum(pargs.num_datapoints, res));
+    }
+    if (pargs.show_perf) {
+        show_perf_counters("read_thp(" + std::string(thp_unit) + ")", res, *lpcs);
+    }
+    // write
+    lpcs = std::vector<std::map<std::string, long long>>();
+    if (sequential_throughput(NULL,
+                              pargs.buffer_size_kbytes<<10,
+                              pargs.num_datapoints,
+                              res,lpcs,1,pargs.total_size_mbytes<<20)) {
+        std::cerr << "write throughput test failed in " << __func__ << std::endl; 
+        return;
+    } else {
+        fprintf(stdout,"\nWRITE %.3f %s std %.3f min %.3f max %.3f\n",
+                average(pargs.num_datapoints, res), thp_unit, deviation(pargs.num_datapoints, res),
+                minimum(pargs.num_datapoints, res), maximum(pargs.num_datapoints, res));
+    }
+    if (pargs.show_perf) {
+        show_perf_counters("write_thp(" + std::string(thp_unit) + ")", res, *lpcs);
+    }
+}
+
 int main(int argc, char** argv) {
-    std::cout << HELP_INFO << std::endl;
     struct parsed_args pargs;
     while (1) {
         int option_index = 0;
@@ -155,7 +240,13 @@ int main(int argc, char** argv) {
             std::cerr << "unknown command encountered." << std::endl;
         }
     }
-    pargs.dump();
+    if (pargs.cmd_name == nullptr) {
+        // do nothing
+    } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP) == 0) {
+        run_seq_thp(pargs);
+    } else {
+        std::cout << pargs.cmd_name << " to be supported." << std::endl;
+    }
 /**
     sequential_throughput_test_result_t result; 
 

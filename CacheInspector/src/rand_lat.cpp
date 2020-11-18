@@ -9,6 +9,7 @@
 #include <string.h>
 #include <time.h>
 #include <ci/config.h>
+#include <ci/rdtsc.hpp>
 #include <ci/rand_lat.hpp>
 #include <ci/linux_perf_counters.hpp>
 
