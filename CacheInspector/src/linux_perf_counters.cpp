@@ -113,7 +113,7 @@ LinuxPerfCounters::LinuxPerfCounters() {
     counters.emplace("sched_switch", LinuxPerfCounter("sched:sched_switch", PERF_TYPE_TRACEPOINT, SCHED_SCHED_SWITCH, false));
 #endif
 
-#if (USE_PERF_CPU_CYCLES) || (TIMING_WITH_CPU_CYCLES)
+#if (USE_PERF_CPU_CYCLES)
     counters.emplace("cpu_cycles(pf)", LinuxPerfCounter("cpu_cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES));
 #endif
 

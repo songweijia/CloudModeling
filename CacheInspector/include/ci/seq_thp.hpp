@@ -6,6 +6,7 @@
 #include <vector>
 #include <tuple>
 #include <string>
+#include <ci/util.hpp>
 
 namespace cacheinspector {
 /**
@@ -18,6 +19,7 @@ namespace cacheinspector {
  *                        throughput in Bytes/cycle. Note: we use the cycle with
  *                        rdtsc instruction, which may be normalized.
  * @param counters      - output parameter for receiving linux perf counters.
+ * @param timing        - timing mechanism, CLOCK_GETTIME | RDTSC | PERF_CPU_CYCLE
  * @param bytes_per_iter- how many bytes to measure for each data point,
  *                        default to 256MiB.
  * @param num_iter_warmup
@@ -31,6 +33,7 @@ extern volatile int32_t sequential_throughput(
         uint32_t num_iter,
         double* results,
         std::optional<std::vector<std::map<std::string, long long>>>& counters,
+        timing_mechanism_t timing = CLOCK_GETTIME,
         const uint32_t is_write = 0,
         const uint64_t bytes_per_iter = (1ull << 28),
         const uint64_t num_iter_warmup = 5,
@@ -54,10 +57,12 @@ extern const sequential_throughput_test_schedule_t default_sequential_throughput
  *                    1) the standard deviation of the read throughput deviation.
  *                    2) the average of the write throughput
  *                    3) the standard deviation of the write throughput deviation.
+ * @param timing     - timing mechanism, CLOCK_GETTIME | RDTSC | PERF_CPU_CYCLE
  * @return 0 for success, other values for failure.
  */
 extern volatile int32_t sequential_throughput_cliffs(
             const sequential_throughput_test_schedule_t& schedule,
-            sequential_throughput_test_result_t& result);
+            sequential_throughput_test_result_t& result,
+            timing_mechanism_t timing = CLOCK_GETTIME);
 
 }//namespace cacheinspector

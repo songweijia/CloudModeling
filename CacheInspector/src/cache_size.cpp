@@ -56,6 +56,7 @@ static int32_t binary_search(
             ret = sequential_throughput(workspace, buffer_size,
                                         num_iter_per_sample, thps,
                                         no_counters,  // not using the counters.
+                                        CLOCK_GETTIME,
                                         is_write, num_bytes_per_iter);
             RETURN_ON_ERROR(ret, "sequential_throughput");
             double v = average(num_iter_per_sample, thps);

@@ -240,7 +240,7 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     t2 = rdtsc();
 #elif TIMING_WITH_CPU_CYCLES
 #else
-#error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
+// #error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
 #endif
 
     lpcs.stop_perf_events();
@@ -257,7 +257,7 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
 #elif TIMING_WITH_CPU_CYCLES
     ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
 #else
-#error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
+// #error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
 #endif
 
     return ret;

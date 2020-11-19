@@ -7,6 +7,12 @@
 #include <math.h>
 #include <inttypes.h>
 
+typedef enum {
+    CLOCK_GETTIME,
+    RDTSC,
+    PERF_CPU_CYCLE
+} timing_mechanism_t;
+
 #define RETURN_ON_ERROR(err,msg) \
 while((err)<0) {\
   fprintf(stderr, "%s, ret=%d, errno=%d(%s)\n", msg, err, errno, strerror(errno));\

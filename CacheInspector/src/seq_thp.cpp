@@ -31,18 +31,22 @@ extern int32_t volatile sequential_throughput(
         uint32_t num_iter,
         double* results,
         std::optional<std::vector<std::map<std::string, long long>>>& counters,
+        timing_mechanism_t timing,
         uint32_t is_write,
         uint64_t bytes_per_iter,
         uint64_t num_iter_warmup,
         size_t buf_alignment) {
     assert(buffer_size > 0);
 
-    int ret = 0;
-#if TIMING_WITH_CLOCK_GETTIME
-    struct timespec ts, te;
-#elif TIMING_WITH_RDTSC
-    uint64_t ts, te;
+#if !USE_INTEL_CPU_CYCLES
+    if (timing == PERF_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+    }
 #endif
+
+    int ret = 0;
+    struct timespec clk_ts, clk_te;
+    uint64_t tsc_ts, tsc_te;
     uint64_t iter_per_iter = (bytes_per_iter + buffer_size - 1) / buffer_size;
 
     // STEP 1 - validate/allocate the buffer
@@ -88,12 +92,12 @@ extern int32_t volatile sequential_throughput(
         LinuxPerfCounters lpcs;
 
         // STEP 4 - start the timer
-#if TIMING_WITH_CLOCK_GETTIME
-        ret = clock_gettime(CLOCK_REALTIME, &ts);
-        RETURN_ON_ERROR(ret, "clock_gettime");
-#elif TIMING_WITH_RDTSC
-        ts = rdtsc();
-#endif
+        if (timing == CLOCK_GETTIME) {
+            ret = clock_gettime(CLOCK_REALTIME, &clk_ts);
+            RETURN_ON_ERROR(ret, "clock_gettime");
+        } else if (timing == RDTSC) {
+            tsc_ts = rdtsc();
+        }
 
         lpcs.start_perf_events();
 
@@ -611,25 +615,23 @@ extern int32_t volatile sequential_throughput(
         }
 
         // STEP 6 - end the timer
-#if TIMING_WITH_CLOCK_GETTIME
-        ret = clock_gettime(CLOCK_REALTIME, &te);
-        RETURN_ON_ERROR(ret, "clock_gettime");
-#elif TIMING_WITH_RDTSC
-        te = rdtsc();
-#endif
+        if (timing == CLOCK_GETTIME) {
+            ret = clock_gettime(CLOCK_REALTIME, &clk_te);
+            RETURN_ON_ERROR(ret, "clock_gettime");
+        } else if (timing == RDTSC) {
+            tsc_te = rdtsc();
+        }
 
         lpcs.stop_perf_events();
 
         // STEP 7 - calculate throguhput
-#if TIMING_WITH_CPU_CYCLES
-        results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
-#elif TIMING_WITH_RDTSC
-        results[iter] = THROUGHPUT_BYTES_PER_CYCLE((iter_per_iter)*buffer_size, ts, te);
-#elif TIMING_WITH_CLOCK_GETTIME
-        results[iter] = THROUGHPUT_GiBPS((iter_per_iter)*buffer_size, ts, te);
-#else
-#error Timing facility not specified, please define either TIMING_WITH_CLOCK_GETTIME, TIMEING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
-#endif
+        if (timing == PERF_CPU_CYCLE) {
+            results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
+        } else if (timing == RDTSC) {
+            results[iter] = THROUGHPUT_BYTES_PER_CYCLE((iter_per_iter)*buffer_size, tsc_ts, tsc_te);
+        } else if (timing == CLOCK_GETTIME) {
+            results[iter] = THROUGHPUT_GiBPS((iter_per_iter)*buffer_size, clk_ts, clk_te);
+        }
 
         // STEP 8 - collect counters
         if(counters.has_value()) {
@@ -1133,7 +1135,15 @@ const sequential_throughput_test_schedule_t default_sequential_throughput_test_s
 
 extern volatile int32_t sequential_throughput_cliffs(
     const sequential_throughput_test_schedule_t& schedule,
-    sequential_throughput_test_result_t& result) {
+    sequential_throughput_test_result_t& result,
+    timing_mechanism_t timing) {
+
+#if !USE_INTEL_CPU_CYCLES
+    if (timing == PERF_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+    }
+#endif
+
     // STEP 1: get parameters
     uint64_t len_schedule = schedule.size();
     if (schedule.empty()) {
@@ -1183,14 +1193,14 @@ extern volatile int32_t sequential_throughput_cliffs(
 
         double avg_read_thp = 0.0f,read_thp_dev = 0.0f,avg_write_thp = 0.0f,write_thp_dev = 0.0f;
         // read throughput
-        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,0,bytes_per_iter)) {
+        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,timing,0,bytes_per_iter)) {
             RETURN_ON_ERROR(-4, "Read test with sequential_throughput() failed.");
         } else {
             avg_read_thp = average(num_iter, iter_results);
             read_thp_dev = deviation(num_iter, iter_results);
         }
         // write throughput
-        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,1,bytes_per_iter)) {
+        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,timing,1,bytes_per_iter)) {
             RETURN_ON_ERROR(-4, "Write test with sequential_throughput() failed.");
         } else {
             avg_write_thp = average(num_iter, iter_results);
