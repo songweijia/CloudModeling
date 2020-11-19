@@ -315,6 +315,10 @@ static void run_seq_thp_schedule(const struct parsed_args& pargs) {
     }
 }
 
+static void run_read_lat(const struct parsed_args& pargs) {
+    // TODO:
+}
+
 int main(int argc, char** argv) {
     struct parsed_args pargs;
     while (1) {
@@ -375,6 +379,8 @@ int main(int argc, char** argv) {
         run_seq_thp(pargs);
     } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP_SCHEDULE) == 0) {
         run_seq_thp_schedule(pargs);
+    } else if (strcmp(pargs.cmd_name, OPT_READ_LAT) == 0) {
+        run_read_lat(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
     }

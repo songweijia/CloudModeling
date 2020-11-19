@@ -7,17 +7,16 @@
 #include <optional>
 #include <unistd.h>
 
+#include <ci/config.h>
 #if USE_HUGEPAGE
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
-#define FILE_NAME "/mnt/huge/hugepagefile"
 #define ADDR (void*)(0x6000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE)
-#define FLAGS (MAP_SHARED)
+#define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
 #endif
 
-#include <ci/config.h>
 
 #include <ci/linux_perf_counters.hpp>
 #include <ci/seq_thp.hpp>
@@ -51,21 +50,12 @@ extern int32_t volatile sequential_throughput(
 
     // STEP 1 - validate/allocate the buffer
     void* buf = buffer;
-#ifdef USE_HUGEPAGE
-    int fd = -1;
-#endif
     if(buf == NULL) {
 #if USE_HUGEPAGE
-        fd = open(FILE_NAME, O_CREAT | O_RDWR, 0755);
-        if(fd < 0) {
-            perror("Open file failed. Is hugetlbfs mounted?");
-            exit(1);
-        }
-        buf = mmap(ADDR, buffer_size, PROTECTION, FLAGS, fd, 0);
+        buf = mmap(ADDR, buffer_size, PROTECTION, FLAGS, -1, 0);
         if(buf == MAP_FAILED) {
             perror("mmap");
             printf("errno=%d\n", errno);
-            unlink(FILE_NAME);
             exit(1);
         }
 #else
@@ -643,8 +633,6 @@ extern int32_t volatile sequential_throughput(
     if(buffer == nullptr) {
 #if USE_HUGEPAGE
         munmap(buf, buffer_size);
-        close(fd);
-        unlink(FILE_NAME);
 #else
         free(buf);
 #endif
@@ -1152,24 +1140,19 @@ extern volatile int32_t sequential_throughput_schedule(
     }
     uint64_t total_buffer_size = std::get<0>(schedule.back());
     void* buf = nullptr;
+#if USE_HUGEPAGE
+    const uint64_t page_size = (1ull<<21); // we use 2MB hugepage
+#else
     const uint64_t page_size = getpagesize();
+#endif
     total_buffer_size = (total_buffer_size + page_size - 1)/page_size*page_size;
 
     // STEP 2: allocate space
-#ifdef USE_HUGEPAGE
-    int hp_fd = -1;
-#endif
-
 #if USE_HUGEPAGE
-    fd = open(FILE_NAME, O_CREAT | O_RDWR, 0755);
-    if(fd < 0) {
-        RETURN_ON_ERROR(-2, "Open hugrpage file failed, Is hugetlbfs mounted at " FILE_NAME " ?");
-    }
-    buf = mmap(ADDR, total_buffer_size, PROTECTION, FLAGS, fd, 0);
+    buf = mmap(ADDR, total_buffer_size, PROTECTION, FLAGS, -1, 0);
     if(buf == MAP_FAILED) {
         perror("mmap");
-        fprintf("errno=%d\n", errno);
-        unlink(FILE_NAME);
+        fprintf(stderr,"errno=%d\n", errno);
         return -2;
     }
 #else
@@ -1213,8 +1196,6 @@ extern volatile int32_t sequential_throughput_schedule(
     // STEP 4: deallocate space
 #if USE_HUGEPAGE
         munmap(buf, total_buffer_size);
-        close(fd);
-        unlink(FILE_NAME);
 #else
         free(buf);
 #endif
