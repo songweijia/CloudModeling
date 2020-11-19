@@ -16,6 +16,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -ggdb -gdwarf-3")
 set(CMAKE_CXX_FLAGS_RELEASE "-Wall")
 
 #config.h
+set(USE_PERF_SCHED_SWITCH 0)
+set(USE_PERF_CPU_CYCLES 1)
+set(USE_PERF_BUS_CYCLES 0)
+set(USE_PERF_REF_CYCLES 0)
 set(USE_INTEL_CPU_CYCLES 0)
 set(USE_INTEL_REF_CYCLES 0)
 set(USE_INTEL_LLC_HITS 0)
@@ -67,3 +71,7 @@ target_include_directories(ci-bin PRIVATE
 )
 target_link_libraries(ci-bin ci)
 set_target_properties(ci-bin PROPERTIES OUTPUT_NAME ci)
+add_custom_command(TARGET ci-bin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/sample.schedule
+    ${CMAKE_CURRENT_BINARY_DIR}/
+)

@@ -38,9 +38,9 @@ extern int32_t volatile sequential_throughput(
         size_t buf_alignment) {
     assert(buffer_size > 0);
 
-#if !USE_INTEL_CPU_CYCLES
+#if !USE_PERF_CPU_CYCLES
     if (timing == PERF_CPU_CYCLE) {
-        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_PERF_CPU_CYCLES to use cpu cycle timing.");
     }
 #endif
 
@@ -1133,14 +1133,14 @@ const sequential_throughput_test_schedule_t default_sequential_throughput_test_s
     {273574912,0x10000000,8},
 };
 
-extern volatile int32_t sequential_throughput_cliffs(
+extern volatile int32_t sequential_throughput_schedule(
     const sequential_throughput_test_schedule_t& schedule,
     sequential_throughput_test_result_t& result,
     timing_mechanism_t timing) {
 
-#if !USE_INTEL_CPU_CYCLES
+#if !USE_PERF_CPU_CYCLES
     if (timing == PERF_CPU_CYCLE) {
-        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_PERF_CPU_CYCLES to use cpu cycle timing.");
     }
 #endif
 

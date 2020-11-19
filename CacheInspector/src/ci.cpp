@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <fstream>
 #include <ci/ci.hpp>
 
 using namespace cacheinspector;
@@ -37,9 +38,8 @@ using namespace cacheinspector;
     "   [--" OPT_SHOW_PERF "]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "\n2. Cache/Memory throughput test with schedule: --" OPT_SEQ_THP_SCHEDULE "\n" \
-    "Compulsory arguments:\n" \
-    "   --" OPT_SCHEDULE " <schedule file, please see default sequential_throughput.schedule>\n" \
     "Optional arguments:\n" \
+    "   [--" OPT_SCHEDULE " <schedule file, please see default sequential_throughput.schedule>]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "\n3. Cache/Memory read latency test: --" OPT_READ_LAT "\n" \
     "Compulsory arguments:\n" \
@@ -81,7 +81,7 @@ struct parsed_args {
     uint64_t    total_size_mbytes = 0;
     uint64_t    num_datapoints = 0;
     bool        show_perf = false;
-    char*       schedule;
+    char*       schedule = nullptr;
     double      faster_thp = -1.0f;
     double      slower_thp = -1.0f;
     uint64_t    cache_size_hint_kbytes = 0;
@@ -218,6 +218,103 @@ static void run_seq_thp(const struct parsed_args& pargs) {
     }
 }
 
+/**
+ * Parse a schedule file to a schedule
+ *
+ * @param schedule_file The schedule file format is lines of buffer_size(Bytes),total_data_size(Bytes),num_datapoints,
+ *                      ordered in ascending buffer_size. 
+ * @param schedule      The output parameter to receive parsed schedule
+ *
+ * @return 0 for success, other for failure.
+ */
+int parse_schedule(const char* schedule_file, sequential_throughput_test_schedule_t& schedule) {
+    std::ifstream infile(schedule_file);
+    if (!infile.is_open()) {
+        std::cerr << "Failed to open schedul file for read:" << schedule_file << std::endl;
+        return -1;
+    }
+    // reset the contents
+    schedule.clear();
+    // true
+    while(1) {
+        char parse_buffer[1024];
+        uint64_t buffer_size,total_data_size,num_datapoints;
+        uint64_t prev_buffer_size=0;
+        if(!infile.getline(parse_buffer,1024)){
+            break;
+        }
+        uint16_t pos = 0;
+        // pos to the first char.
+        while(pos<1024) {
+            if (parse_buffer[pos] == ' ' || parse_buffer[pos] == '\t') {
+                pos ++;
+            } else {
+                break;
+            }
+        }
+        // skip empty lines or comments(started with #)
+        if (pos == 1024 || parse_buffer[pos] == '\0' || parse_buffer[pos] == '#') {
+            continue;
+        }
+        // find col 1: buffer_size
+        buffer_size = std::stoull(parse_buffer+pos,nullptr,0);
+        if (buffer_size < prev_buffer_size) {
+            std::cerr << "line:'" << parse_buffer << "' has a buffer size smaller than previous one:" << prev_buffer_size << std::endl;
+            return -1;
+        }
+#define NEXT_COL \
+        while (pos < 1024) { \
+            if (parse_buffer[pos] != ',' && parse_buffer[pos] != '\0') { \
+                pos++; \
+            } else { \
+                break; \
+            } \
+        } \
+        if (pos == 1024 || parse_buffer[pos] != ',') { \
+            std::cerr << "Warning: skip invalid line:" << parse_buffer << std::endl; \
+            continue; \
+        } else { \
+            pos ++; \
+        }
+
+        // find col 2: 
+        NEXT_COL;
+        total_data_size = std::stoull(parse_buffer+pos,nullptr,0);
+        // find col 3:
+        NEXT_COL;
+        num_datapoints = std::stoull(parse_buffer+pos,nullptr,0);
+        schedule.emplace_back(std::make_tuple(buffer_size,total_data_size,num_datapoints));
+    }
+    infile.close();
+    return 0;
+}
+
+static void run_seq_thp_schedule(const struct parsed_args& pargs) {
+    sequential_throughput_test_result_t result;
+    sequential_throughput_test_schedule_t schedule;
+
+    if (pargs.schedule) {
+        if(parse_schedule(pargs.schedule,schedule)!=0){
+            std::cerr << "Parsing schedule file failed." << std::endl;
+            return;
+        }
+    } else {
+        // some copy, but it's fine.
+        schedule = default_sequential_throughput_test_schedule;
+    }
+
+    if(sequential_throughput_schedule(schedule, result, pargs.timing_by)) {
+        std::cerr << __func__ << " failed." << std::endl;
+    } else {
+        for(auto fourtuple: result) {
+            std::cout << std::get<0>(fourtuple) << " "
+                      << std::get<1>(fourtuple) << " "
+                      << std::get<2>(fourtuple) << " "
+                      << std::get<3>(fourtuple) << std::endl;
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     struct parsed_args pargs;
     while (1) {
@@ -264,31 +361,22 @@ int main(int argc, char** argv) {
         case 'h':
             pargs.request_help = true;
             break;
+        case '?':
+            std::cerr << "Invalid argument list. Please try '" << argv[0] << " --" OPT_HELP << "'" << std::endl;
+            return -1;
         default:
             std::cerr << "unknown command encountered." << std::endl;
+            return -1;
         }
     }
     if (pargs.cmd_name == nullptr || pargs.request_help) {
         std::cout << HELP_INFO << std::endl;
     } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP) == 0) {
         run_seq_thp(pargs);
+    } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP_SCHEDULE) == 0) {
+        run_seq_thp_schedule(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
     }
-/**
-    sequential_throughput_test_result_t result; 
-
-    if(sequential_throughput_cliffs(default_sequential_throughput_test_schedule,result)) {
-        std::cerr << "profiling cliff failed" << std::endl;
-        return -1;
-    }
-
-    for(auto fourtuple: result) {
-        std::cout << std::get<0>(fourtuple) << " "
-                  << std::get<1>(fourtuple) << " "
-                  << std::get<2>(fourtuple) << " "
-                  << std::get<3>(fourtuple) << std::endl;
-    }
-**/
     return 0;
 }

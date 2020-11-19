@@ -45,7 +45,7 @@ using sequential_throughput_test_result_t = std::vector<std::tuple<double,double
 extern const sequential_throughput_test_schedule_t default_sequential_throughput_test_schedule;
 
 /**
- * microbenchmark: get the sequential throughput cliff chart data
+ * microbenchmark: get the sequential throughput cliff chart data with a schedule
  *
  * @param schedule  - the test plan, each element is a 3-tuple of the numbers
  *                    0) the working set (buffer) size in Bytes
@@ -60,7 +60,7 @@ extern const sequential_throughput_test_schedule_t default_sequential_throughput
  * @param timing     - timing mechanism, CLOCK_GETTIME | RDTSC | PERF_CPU_CYCLE
  * @return 0 for success, other values for failure.
  */
-extern volatile int32_t sequential_throughput_cliffs(
+extern volatile int32_t sequential_throughput_schedule(
             const sequential_throughput_test_schedule_t& schedule,
             sequential_throughput_test_result_t& result,
             timing_mechanism_t timing = CLOCK_GETTIME);
