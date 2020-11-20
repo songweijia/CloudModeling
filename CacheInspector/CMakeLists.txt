@@ -69,9 +69,9 @@ endif()
 
 add_library(ci STATIC
     src/seq_thp.cpp
-    src/cache_size.cpp
     src/rand_lat.cpp
-#   src/rr_lat.c
+    src/schedule.cpp
+    src/cache_size.cpp
     src/linux_perf_counters.cpp
 )
 target_include_directories(ci PUBLIC

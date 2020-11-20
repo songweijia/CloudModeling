@@ -640,7 +640,7 @@ extern int32_t volatile sequential_throughput(
 
     return 0;
 }
-
+/**
 const sequential_throughput_test_schedule_t default_sequential_throughput_test_schedule = {
     {4096,0x8000000,32},
     {8192,0x8000000,32},
@@ -1120,86 +1120,5 @@ const sequential_throughput_test_schedule_t default_sequential_throughput_test_s
     {268210176,0x10000000,8},
     {273574912,0x10000000,8},
 };
-
-extern volatile int32_t sequential_throughput_schedule(
-    const sequential_throughput_test_schedule_t& schedule,
-    sequential_throughput_test_result_t& result,
-    timing_mechanism_t timing) {
-
-#if !USE_PERF_CPU_CYCLES
-    if (timing == PERF_CPU_CYCLE) {
-        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_PERF_CPU_CYCLES to use cpu cycle timing.");
-    }
-#endif
-
-    // STEP 1: get parameters
-    uint64_t len_schedule = schedule.size();
-    if (schedule.empty()) {
-        // empty schedule
-        RETURN_ON_ERROR(-1,"Error: empty schedule.");
-    }
-    uint64_t total_buffer_size = std::get<0>(schedule.back());
-    void* buf = nullptr;
-#if USE_HUGEPAGE
-    const uint64_t page_size = (1ull<<21); // we use 2MB hugepage
-#else
-    const uint64_t page_size = getpagesize();
-#endif
-    total_buffer_size = (total_buffer_size + page_size - 1)/page_size*page_size;
-
-    // STEP 2: allocate space
-#if USE_HUGEPAGE
-    buf = mmap(ADDR, total_buffer_size, PROTECTION, FLAGS, -1, 0);
-    if(buf == MAP_FAILED) {
-        perror("mmap");
-        fprintf(stderr,"errno=%d\n", errno);
-        return -2;
-    }
-#else
-    if (posix_memalign(&buf, page_size, total_buffer_size)) {
-        RETURN_ON_ERROR(-3, "posix_memalign.");
-    }
-#endif
-
-    // STEP 3: do tests
-    result.resize(len_schedule);
-    for (uint64_t i=0;i<len_schedule;i++) {
-        uint64_t buffer_size = std::get<0>(schedule[i]);
-        uint64_t bytes_per_iter = std::get<1>(schedule[i]);
-        uint64_t num_iter = std::get<2>(schedule[i]);
-        uint64_t num_iter_warmup = num_iter/6;
-        if (num_iter_warmup == 0) num_iter_warmup = 1;
-        if (num_iter_warmup > 5) num_iter_warmup = 5;
-
-        double iter_results[num_iter];
-        auto lpcs = std::optional<std::vector<std::map<std::string, long long>>>();
-
-        double avg_read_thp = 0.0f,read_thp_dev = 0.0f,avg_write_thp = 0.0f,write_thp_dev = 0.0f;
-        // read throughput
-        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,timing,0,bytes_per_iter)) {
-            RETURN_ON_ERROR(-4, "Read test with sequential_throughput() failed.");
-        } else {
-            avg_read_thp = average(num_iter, iter_results);
-            read_thp_dev = deviation(num_iter, iter_results);
-        }
-        // write throughput
-        if (sequential_throughput(buf,buffer_size,num_iter,iter_results,lpcs,timing,1,bytes_per_iter)) {
-            RETURN_ON_ERROR(-4, "Write test with sequential_throughput() failed.");
-        } else {
-            avg_write_thp = average(num_iter, iter_results);
-            write_thp_dev = deviation(num_iter, iter_results);
-        }
-
-        result[i] = std::make_tuple(avg_read_thp,read_thp_dev,avg_write_thp,write_thp_dev);
-    }
-
-    // STEP 4: deallocate space
-#if USE_HUGEPAGE
-        munmap(buf, total_buffer_size);
-#else
-        free(buf);
-#endif
-    return 0;
-}
-
+**/
 }//namespace cacheinspector

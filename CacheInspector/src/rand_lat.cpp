@@ -82,7 +82,6 @@ static bool fill_cyclic_linked_list(uint64_t* cll, int64_t ecnt) {
     cll[offset] = (uint64_t)&cll[head];
 
     free(bytemap);
-    printf("initialized %lu entries\n", filled);
 
     return true;
 }
@@ -276,26 +275,29 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     return ret;
 }
 
-int32_t random_latency(int64_t buffer_size, 
-                       int num_points, 
-                       double* output, 
-                       std::optional<std::vector<std::map<std::string, long long>>>& counters,
-                       timing_mechanism_t timing) {
+int32_t rand_latency(void* buffer,
+                     int64_t buffer_size, 
+                     int num_points, 
+                     double* output, 
+                     std::optional<std::vector<std::map<std::string, long long>>>& counters,
+                     timing_mechanism_t timing) {
     // STEP 1 - prepare the cyclic linked list
-    uint64_t* cll;
+    uint64_t* cll = static_cast<uint64_t*>(buffer);
     int64_t num_entries = buffer_size / sizeof(uint64_t);
+    if (cll == nullptr) {
 #if USE_HUGEPAGE
-    cll = static_cast<uint64_t*>(mmap(ADDR, buffer_size, PROTECTION, FLAGS, -1, 0));
-    if (cll == MAP_FAILED) {
-        perror("mmap");
-        fprintf(stderr,"errno=%d\n", errno);
-        return -1;
-    }
+        cll = static_cast<uint64_t*>(mmap(ADDR, buffer_size, PROTECTION, FLAGS, -1, 0));
+        if (cll == MAP_FAILED) {
+            perror("mmap");
+            fprintf(stderr,"errno=%d\n", errno);
+            return -1;
+        }
 #else
-    if(posix_memalign((void**)&cll, 4096, buffer_size) != 0) {
-        fprintf(stderr, "fail to call posix_memalign. errno=%d\n", errno);
-    }
+        if(posix_memalign((void**)&cll, 4096, buffer_size) != 0) {
+            fprintf(stderr, "fail to call posix_memalign. errno=%d\n", errno);
+        }
 #endif
+    }
     if(fill_cyclic_linked_list(cll, num_entries) == false) {
         fprintf(stderr, "failed to fill the cyclic linked list.\n");
     }
@@ -330,38 +332,12 @@ int32_t random_latency(int64_t buffer_size,
         output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS, cll + (i % num_entries), counters, timing) / NUMBER_OF_ACCESS;
 
     // STEP 5 - clean up
+    if (buffer == nullptr) {
 #if USE_HUGEPAGE
-    munmap(cll,buffer_size);
+        munmap(cll,buffer_size);
 #else
-    free(cll);
+        free(cll);
 #endif
-    return 0;
-}
-
-#ifdef UNIT_TEST
-int main(int argc, char** argv) {
-    if(argc != 2) {
-        printf("Usage: %s <buffer_size>.\n", argv[0]);
-        return 0;
     }
-
-    int buffer_size = atoi(argv[1]);
-    //int num_entries = atoi(argv[1]);
-
-    //uint64_t* entries = (uint64_t *)malloc(num_entries*sizeof(uint64_t));
-    //if (fill_cyclic_linked_list(entries,num_entries)==false) {
-    //  fprintf(stderr,"failed to allocate cyclic linked list.\n");
-    //  return -1;
-    //}
-
-    //for (int i=0;i<num_entries;i++) {
-    //  fprintf(stderr,"%d --> %ld\n",i,(uint64_t*)entries[i]-entries);
-    //}
-
-    //free(entries);
-
-    printf("latency = %.3f\n", random_latency(buffer_size));
-
     return 0;
 }
-#endif  //UNIT_TEST

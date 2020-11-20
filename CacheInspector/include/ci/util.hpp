@@ -28,14 +28,14 @@ while((err)<0) {\
 #define THROUGHPUT_BYTES_PER_CYCLE(b,s,e) \
   ((double)(b) / (e-s))
 
-inline double average(int n, double * res) {
+inline double average(int n, const double * res) {
   double sum=0.0f;
   for(int i=0;i<n;i++)
     sum+=res[i];
   return sum/n;
 }
 
-inline double deviation(int n,double * res) {
+inline double deviation(int n,const double * res) {
   double avg = average(n,res);
   double sum = 0.0f;
   for(int i=0;i<n;i++)
@@ -43,7 +43,7 @@ inline double deviation(int n,double * res) {
   return sqrt(sum/(n-1));
 }
 
-inline double minimum(int n,double *res) {
+inline double minimum(int n,const double *res) {
   double min = res[0];
   for(int i=1;i<n;i++)
     if (min > res[i])
@@ -51,7 +51,7 @@ inline double minimum(int n,double *res) {
   return min;
 }
 
-inline double maximum(int n,double *res) {
+inline double maximum(int n,const double *res) {
   double max = res[0];
   for(int i=1;i<n;i++)
     if (max < res[i])

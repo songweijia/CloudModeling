@@ -18,6 +18,7 @@ using namespace cacheinspector;
 #define OPT_NUM_DPS             "num_datapoints"
 #define OPT_SHOW_PERF           "show_perf_counters"
 #define OPT_SCHEDULE            "schedule"
+#define OPT_SCHEDULE_FILE       "schedule_file"
 #define OPT_FASTER_TIER_THP     "faster_throughput"
 #define OPT_SLOWER_TIER_THP     "slower_throughput"
 #define OPT_CACHE_SIZE_HINT     "cache_size_hint"
@@ -37,15 +38,17 @@ using namespace cacheinspector;
     "   [--" OPT_NUM_DPS " <number of data points,default is 32>]\n" \
     "   [--" OPT_SHOW_PERF "]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
-    "\n2. Cache/Memory throughput test with schedule: --" OPT_SEQ_THP_SCHEDULE "\n" \
-    "Optional arguments:\n" \
-    "   [--" OPT_SCHEDULE " <schedule file, please see default sequential_throughput.schedule>]\n" \
-    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
-    "\n3. Cache/Memory read latency test: --" OPT_READ_LAT "\n" \
+    "\n2. Cache/Memory read latency test: --" OPT_READ_LAT "\n" \
     "Compulsory arguments:\n" \
     "   --" OPT_BUF_SIZE " <buffer size in KiB>\n" \
     "Optional arguments:\n" \
     "   [--" OPT_NUM_DPS " <number of data points,default is 32>]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_SHOW_PERF "]\n" \
+    "\n3. Cache/Memory throughput/latency test with schedule: --" OPT_SCHEDULE "\n" \
+    "Compulsory arguments:\n" \
+    "   --" OPT_SCHEDULE_FILE " <schedule file, please see default sample.schedule>\n" \
+    "Optional arguments:\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "   [--" OPT_SHOW_PERF "]\n" \
     "\n4. Cache size test: --" OPT_CACHE_SIZE "\n" \
@@ -60,14 +63,14 @@ using namespace cacheinspector;
 
 static struct option long_options[] = {
     {OPT_SEQ_THP,           no_argument,0,0},
-    {OPT_SEQ_THP_SCHEDULE,  no_argument,0,0},
     {OPT_READ_LAT,          no_argument,0,0},
+    {OPT_SCHEDULE,          no_argument,0,0},
     {OPT_CACHE_SIZE,        no_argument,0,0},
     {OPT_BUF_SIZE,          required_argument,0,0},
     {OPT_TOT_SIZE,          required_argument,0,0},
     {OPT_NUM_DPS,           required_argument,0,0},
     {OPT_SHOW_PERF,         no_argument,0,0},
-    {OPT_SCHEDULE,          required_argument,0,0},
+    {OPT_SCHEDULE_FILE,     required_argument,0,0},
     {OPT_FASTER_TIER_THP,   required_argument,0,0},
     {OPT_SLOWER_TIER_THP,   required_argument,0,0},
     {OPT_CACHE_SIZE_HINT,   required_argument,0,0},
@@ -81,7 +84,7 @@ struct parsed_args {
     uint64_t    total_size_mbytes = 0;
     uint64_t    num_datapoints = 0;
     bool        show_perf = false;
-    char*       schedule = nullptr;
+    char*       schedule_file = nullptr;
     double      faster_thp = -1.0f;
     double      slower_thp = -1.0f;
     uint64_t    cache_size_hint_kbytes = 0;
@@ -121,7 +124,7 @@ struct parsed_args {
                       << "total_size_mbytes:" << total_size_mbytes << '\n'
                       << "num_datapoints:" << num_datapoints << '\n'
                       << "show_perf:" << show_perf << '\n'
-                      << "schedule:" << schedule << '\n'
+                      << "schedule_file:" << schedule_file << '\n'
                       << "faster_thp:" << faster_thp << '\n'
                       << "slower_thp:" << slower_thp << '\n'
                       << "cache_size_hint_kbytes:" << cache_size_hint_kbytes << '\n'
@@ -134,7 +137,7 @@ struct parsed_args {
     }
 };
 
-static void show_perf_counters(const std::string& series_name, double res[], std::vector<std::map<std::string, long long>>& lpcs) {
+static void show_perf_counters(const std::string& series_name, const double res[], const std::vector<std::map<std::string, long long>>& lpcs) {
     if (lpcs.empty() || lpcs[0].empty()) {
         return;
     }
@@ -221,13 +224,12 @@ static void run_seq_thp(const struct parsed_args& pargs) {
 /**
  * Parse a schedule file to a schedule
  *
- * @param schedule_file The schedule file format is lines of buffer_size(Bytes),total_data_size(Bytes),num_datapoints,
- *                      ordered in ascending buffer_size. 
+ * @param schedule_file The schedule file, please see sample.schedule for format description.
  * @param schedule      The output parameter to receive parsed schedule
  *
  * @return 0 for success, other for failure.
  */
-int parse_schedule(const char* schedule_file, sequential_throughput_test_schedule_t& schedule) {
+int parse_schedule(const char* schedule_file, ci_schedule_t& schedule) {
     std::ifstream infile(schedule_file);
     if (!infile.is_open()) {
         std::cerr << "Failed to open schedul file for read:" << schedule_file << std::endl;
@@ -238,7 +240,7 @@ int parse_schedule(const char* schedule_file, sequential_throughput_test_schedul
     // true
     while(1) {
         char parse_buffer[1024];
-        uint64_t buffer_size,total_data_size,num_datapoints;
+        ci_schedule_entry_t schedule_entry;
         uint64_t prev_buffer_size=0;
         if(!infile.getline(parse_buffer,1024)){
             break;
@@ -257,11 +259,13 @@ int parse_schedule(const char* schedule_file, sequential_throughput_test_schedul
             continue;
         }
         // find col 1: buffer_size
-        buffer_size = std::stoull(parse_buffer+pos,nullptr,0);
-        if (buffer_size < prev_buffer_size) {
+        schedule_entry.buffer_size = std::stoull(parse_buffer+pos,nullptr,0);
+        if (schedule_entry.buffer_size < prev_buffer_size) {
             std::cerr << "line:'" << parse_buffer << "' has a buffer size smaller than previous one:" << prev_buffer_size << std::endl;
             return -1;
         }
+
+///SYNTACTIC SUGAR///
 #define NEXT_COL \
         while (pos < 1024) { \
             if (parse_buffer[pos] != ',' && parse_buffer[pos] != '\0') { \
@@ -276,54 +280,104 @@ int parse_schedule(const char* schedule_file, sequential_throughput_test_schedul
         } else { \
             pos ++; \
         }
+/////////////////////
 
-        // find col 2: 
+        // find col 2: enable_thp:=0|1
         NEXT_COL;
-        total_data_size = std::stoull(parse_buffer+pos,nullptr,0);
-        // find col 3:
+        schedule_entry.enable_thp = (std::stoul(parse_buffer+pos,nullptr,0)!=0);
+        // find col 3: total_data_size
         NEXT_COL;
-        num_datapoints = std::stoull(parse_buffer+pos,nullptr,0);
-        schedule.emplace_back(std::make_tuple(buffer_size,total_data_size,num_datapoints));
+        schedule_entry.total_data_size = std::stoull(parse_buffer+pos,nullptr,0);
+        // find col 4: thp_num_datapoints
+        NEXT_COL;
+        schedule_entry.thp_num_datapoints = std::stoull(parse_buffer+pos,nullptr,0);
+        // find col 5: enable_lat:=0|1
+        NEXT_COL;
+        schedule_entry.enable_lat = (std::stoul(parse_buffer+pos,nullptr,0)!=0);
+        // find col 6: thp_num_datapoints
+        NEXT_COL;
+        schedule_entry.lat_num_datapoints = std::stoull(parse_buffer+pos,nullptr,0);
+        schedule.emplace_back(schedule_entry);
     }
     infile.close();
     return 0;
 }
 
-static void run_seq_thp_schedule(const struct parsed_args& pargs) {
-    sequential_throughput_test_result_t result;
-    sequential_throughput_test_schedule_t schedule;
+class ConsoleCollector : public ScheduleResultCollector {
+    timing_mechanism_t  timing;
+    bool                show_perf;
+    const char*         thp_unit;
+    const char*         lat_unit;
+public:
+    /** constructor **/
+    ConsoleCollector(timing_mechanism_t _timing = CLOCK_GETTIME,
+            bool _show_perf = false) : timing(_timing),show_perf(_show_perf) {
+        thp_unit = "GiB/s";
+        lat_unit = "nsecs";
+        if (timing == PERF_CPU_CYCLE) {
+           thp_unit = "byte/cycle(CPU)";
+           lat_unit = "cycle(CPU)";
+        } else if (timing == RDTSC) {
+            thp_unit = "byte/cycle(TSC)";
+            lat_unit = "cycle(TSC)";
+        }
+    }
+    /** throughput collector **/
+    virtual void collect_throughput(const bool is_write,
+                                    const uint64_t buffer_size,
+                                    const uint64_t num_datapoints,
+                                    const double results[],
+                                    const std::optional<std::vector<std::map<std::string, long long>>>& lpcs) override {
+        const char* read_write = (is_write?"WRITE":"READ");
+        fprintf(stdout,"\n%s %.3f %s std %.3f min %.3f max %.3f\n", read_write,
+                average(num_datapoints, results), thp_unit, deviation(num_datapoints, results),
+                minimum(num_datapoints, results), maximum(num_datapoints, results));
+        if (show_perf) {
+            show_perf_counters( std::string(read_write) + "_THP(" + thp_unit + ")", results, *lpcs);
+        }
+    }
+    /** latency collector **/
+    virtual void collect_latency(const uint64_t buffer_size,
+                                 const uint64_t num_datapoints,
+                                 const double results[],
+                                 const std::optional<std::vector<std::map<std::string, long long>>>& lpcs) override{
+        fprintf(stdout,"\nLATENCY %.3f %s std %.3f min %.3f max %.3f\n",
+                average(num_datapoints, results), lat_unit, deviation(num_datapoints, results),
+                minimum(num_datapoints, results), maximum(num_datapoints, results));
+        if (show_perf) {
+            show_perf_counters("latency (" + std::string(lat_unit) + ")", results, *lpcs);
+        }
+    }
+};
 
-    if (pargs.schedule) {
-        if(parse_schedule(pargs.schedule,schedule)!=0){
+static void run_schedule(const struct parsed_args& pargs) {
+    ci_schedule_t schedule;
+
+    if (pargs.schedule_file) {
+        if(parse_schedule(pargs.schedule_file,schedule)!=0){
             std::cerr << "Parsing schedule file failed." << std::endl;
             return;
         }
     } else {
-        // some copy, but it's fine.
-        schedule = default_sequential_throughput_test_schedule;
+        std::cerr << "Plesae specify the schedule file by --" OPT_SCHEDULE_FILE "." << std::endl;
+        return;
     }
 
-    if(sequential_throughput_schedule(schedule, result, pargs.timing_by)) {
-        std::cerr << __func__ << " failed." << std::endl;
-    } else {
-        for(auto fourtuple: result) {
-            std::cout << std::get<0>(fourtuple) << " "
-                      << std::get<1>(fourtuple) << " "
-                      << std::get<2>(fourtuple) << " "
-                      << std::get<3>(fourtuple) << std::endl;
-        }
+    ConsoleCollector cc(pargs.timing_by,pargs.show_perf);
+
+    if(ci_schedule(schedule, cc, pargs.timing_by, pargs.show_perf)) {
+        std::cerr << "ci_schedule()" << " failed." << std::endl;
     }
 }
 
 static void run_read_lat(const struct parsed_args& pargs) {
     std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
     double res[pargs.num_datapoints];
-    if (random_latency(pargs.buffer_size_kbytes<<10,pargs.num_datapoints,res,lpcs,pargs.timing_by) != 0){
-        std::cerr << "random_latency() failed." << std::endl;
+    if (rand_latency(nullptr, pargs.buffer_size_kbytes<<10,pargs.num_datapoints,res,lpcs,pargs.timing_by) != 0){
+        std::cerr << "rand_latency() failed." << std::endl;
         return;
     }
 
-    // TODO: use different timing mode.
     const char* time_unit = "nsecs";
     if (pargs.timing_by == RDTSC) {
         time_unit = "TSC ticks";
@@ -347,7 +401,7 @@ int main(int argc, char** argv) {
         switch(c) {
         case 0:
             if (strcmp(long_options[option_index].name,OPT_SEQ_THP) == 0 ||
-                strcmp(long_options[option_index].name,OPT_SEQ_THP_SCHEDULE) == 0 ||
+                strcmp(long_options[option_index].name,OPT_SCHEDULE) == 0 ||
                 strcmp(long_options[option_index].name,OPT_CACHE_SIZE) == 0 ||
                 strcmp(long_options[option_index].name,OPT_READ_LAT) == 0) {
                 if (pargs.cmd_name != nullptr) {
@@ -366,8 +420,8 @@ int main(int argc, char** argv) {
                 pargs.num_datapoints = std::stoull(optarg);
             } else if (strcmp(long_options[option_index].name,OPT_SHOW_PERF) == 0) {
                 pargs.show_perf = true;
-            } else if (strcmp(long_options[option_index].name,OPT_SCHEDULE) == 0) {
-                pargs.schedule = optarg;
+            } else if (strcmp(long_options[option_index].name,OPT_SCHEDULE_FILE) == 0) {
+                pargs.schedule_file = optarg;
             } else if (strcmp(long_options[option_index].name,OPT_FASTER_TIER_THP) == 0) {
                 pargs.faster_thp= std::stod(optarg);
             } else if (strcmp(long_options[option_index].name,OPT_SLOWER_TIER_THP) == 0) {
@@ -396,10 +450,10 @@ int main(int argc, char** argv) {
         std::cout << HELP_INFO << std::endl;
     } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP) == 0) {
         run_seq_thp(pargs);
-    } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP_SCHEDULE) == 0) {
-        run_seq_thp_schedule(pargs);
     } else if (strcmp(pargs.cmd_name, OPT_READ_LAT) == 0) {
         run_read_lat(pargs);
+    } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP_SCHEDULE) == 0) {
+        run_schedule(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
     }

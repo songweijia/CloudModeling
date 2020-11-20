@@ -1,4 +1,9 @@
-#buffer_size(Bytes),total_data_size(Bytes),num_datapoints
+#(1) buffer_size(bytes)
+#(2) enable_thp
+#(3) thp_total_data_size(bytes)
+#(4) thp_num_datapoints
+#(5) enable_lat
+#(6) lat_num_datapoints
 0x1000,0x8000000,32
 0x1400,0x8000000,32
 0x1800,0x8000000,32
