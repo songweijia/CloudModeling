@@ -41,18 +41,18 @@ tracepoints=(
 if [ ${SCOPE} == "all" ] ; then
     for event in `sudo perf list tracepoint | grep Tracepoint\ event | sed 's/:/\//g' | awk '{print $1}'`
     do
-        echo -n -e "${event}\t"| sed -E 's/\/|-/_/g' | awk '{printf "#define %s ", toupper($1)}' >> $HEADER_FILE 
+        echo -n -e "${event}\t"| sed -E 's/\/|-/_/g' | awk '{printf "#define %s ", toupper($1)}' >> $HEADER_FILE
         sudo cat `sudo find /sys/kernel/ | grep "${event}/id"` >> $HEADER_FILE
     done
 else
     for event in ${tracepoints[@]}
     do
         event=`echo $event |  sed 's/:/\//g' | awk '{print $1}'`
-        echo -n -e "${event}\t"| sed -E 's/\/|-/_/g' | awk '{printf "#define %s ", toupper($1)}' >> $HEADER_FILE 
-        sudo cat `sudo find /sys/kernel/ | grep "${event}/id"` >> $HEADER_FILE
+        echo -n -e "${event}\t"| sed -E 's/\/|-/_/g' | awk '{printf "#define %s ", toupper($1)}' >> $HEADER_FILE
+        sudo cat `sudo find /sys/kernel/ | grep "${event}/id"` | head -1 >> $HEADER_FILE
     done
 fi
 echo "" >> $HEADER_FILE
 echo "#endif" >> $HEADER_FILE
 
-clang-format -i $HEADER_FILE
+# clang-format -i $HEADER_FILE

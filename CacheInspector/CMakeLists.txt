@@ -30,6 +30,11 @@ set(USE_INTEL_SANDYBRIDGE_DTLB_LOAD_MISS_CAUSES_A_PAGE_WALK 0)
 set(USE_INTEL_SANDYBRIDGE_DTLB_STORE_MISS_CAUSES_A_PAGE_WALK 0)
 set(USE_INTEL_SANDYBRIDGE_ICACHE_MISSES 0)
 
+set(ENABLE_PERF_TRACEPOINT 0)
+if (${USE_PERF_SCHED_SWITCH} EQUAL 1)
+    set(ENABLE_PERF_TRACEPOINT 1)
+endif()
+
 set(USE_HUGEPAGE 1)
 
 execute_process(COMMAND lscpu
@@ -54,6 +59,14 @@ endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/include/ci/config.h.in ${CMAKE_BINARY_DIR}/include/ci/config.h)
 
+if (${ENABLE_PERF_TRACEPOINT} EQUAL 1)
+add_custom_target(ci-tracepoint-header
+    COMMAND ${CMAKE_SOURCE_DIR}/src/generate-tracepoint-ids-header.sh
+    MAIN_DEPENDENCY ${CMAKE_SOURCE_DIR}/src/generate-tracepoint-ids-header.sh
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/ci
+)
+endif()
+
 add_library(ci STATIC
     src/seq_thp.cpp
     src/cache_size.cpp
@@ -65,6 +78,9 @@ target_include_directories(ci PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
 )
+if (${ENABLE_PERF_TRACEPOINT} EQUAL 1)
+    add_dependencies(ci ci-tracepoint-header)
+endif()
 
 add_executable(ci-bin src/ci.cpp)
 target_include_directories(ci-bin PRIVATE

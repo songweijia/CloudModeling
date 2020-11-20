@@ -1,5 +1,4 @@
-#ifndef LINUX_PERF_COUNTERS_HPP
-#define LINUX_PERF_COUNTERS_HPP
+#pragma once
 
 #include <atomic>
 #include <linux/perf_event.h>
@@ -7,8 +6,9 @@
 #include <string>
 #include <vector>
 
-#if USE_PERF_TRACEPOINT_HEADER
-#include "linux_perf_tracepoint_ids.hpp"
+#include <ci/config.h>
+#if ENABLE_PERF_TRACEPOINT
+#include <ci/linux_perf_tracepoint_ids.hpp>
 #endif
 
 /**
@@ -72,4 +72,3 @@ public:
     virtual void print(std::ostream& os, bool withMetadata = true);
 };
 
-#endif  //LINUX_PERF_COUNTERS_HPP

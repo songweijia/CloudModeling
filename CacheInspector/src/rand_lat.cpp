@@ -8,10 +8,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <iostream>
+
 #include <ci/config.h>
+#if USE_HUGEPAGE
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#define ADDR (void*)(0x6000000000000000UL)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
+#endif//USE_HUGEPAGE
+#include <ci/util.hpp>
 #include <ci/rdtsc.hpp>
 #include <ci/rand_lat.hpp>
 #include <ci/linux_perf_counters.hpp>
+
+
 
 static uint64_t rx = 123456789L;
 static uint64_t ry = 362436069L;
@@ -69,26 +82,28 @@ static bool fill_cyclic_linked_list(uint64_t* cll, int64_t ecnt) {
     cll[offset] = (uint64_t)&cll[head];
 
     free(bytemap);
-    printf("initialized...\n");
+    printf("initialized %lu entries\n", filled);
 
     return true;
 }
 
 static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
-                                          std::optional<std::vector<std::map<std::string, long long>>>& counters) {
+                                          std::optional<std::vector<std::map<std::string, long long>>>& counters,
+                                          timing_mechanism_t timing) {
     LinuxPerfCounters lpcs;
     lpcs.start_perf_events();
 
-#if TIMING_WITH_CLOCK_GETTIME
-    struct timespec t1, t2;
-    if(clock_gettime(CLOCK_MONOTONIC, &t1) < 0) {
-        fprintf(stderr, "failed to call clock_gettime().\n");
-        return 0.0f;
+    struct timespec clk_t1, clk_t2;
+    uint64_t tsc_t1 = 0, tsc_t2 = 0;
+
+    if (timing == CLOCK_GETTIME) {
+        if(clock_gettime(CLOCK_MONOTONIC, &clk_t1) < 0) {
+            fprintf(stderr, "failed to call clock_gettime().\n");
+            return 0.0f;
+        }
+    } else if (timing == RDTSC) {
+        tsc_t1 = rdtsc();
     }
-#elif TIMING_WITH_RDTSC
-    uint64_t t1, t2;
-    t1 = rdtsc();
-#endif
     // STEP 1 - traverse
     __asm__ volatile(
             "movq	%0, %%rax \n\t"
@@ -231,17 +246,14 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
             : "m"(num), "m"(cll)
             : "rax", "rbx");
 
-#if TIMING_WITH_CLOCK_GETTIME
-    if(clock_gettime(CLOCK_MONOTONIC, &t2) < 0) {
-        fprintf(stderr, "failed to call clock_gettime().\n");
-        return 0.0f;
+    if (timing == CLOCK_GETTIME) {
+        if(clock_gettime(CLOCK_MONOTONIC, &clk_t2) < 0) {
+            fprintf(stderr, "failed to call clock_gettime().\n");
+            return 0.0f;
+        }
+    } else if (timing == RDTSC) {
+        tsc_t2 = rdtsc();
     }
-#elif TIMING_WITH_RDTSC
-    t2 = rdtsc();
-#elif TIMING_WITH_CPU_CYCLES
-#else
-// #error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
-#endif
 
     lpcs.stop_perf_events();
 
@@ -250,26 +262,40 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     }
 
     double ret = 0.0f;
-#if TIMING_WITH_CLOCK_GETTIME
-    ret = static_cast<double>(t2.tv_sec - t1.tv_sec) * 1e9 + static_cast<double>(t2.tv_nsec - t1.tv_nsec);
-#elif TIMING_WITH_RDTSC
-    ret = static_cast<double>(t2 - t1);
-#elif TIMING_WITH_CPU_CYCLES
-    ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
-#else
-// #error Timing facility not specified, please define wither TIMING_WITH_CLOCK_GETTIME, TIMING_WITH_RDTSC, or TIMING_WITH_CPU_CYCLE.
-#endif
+    if (timing == CLOCK_GETTIME) {
+        ret = static_cast<double>(clk_t2.tv_sec - clk_t1.tv_sec) * 1e9 + static_cast<double>(clk_t2.tv_nsec - clk_t1.tv_nsec);
+    } else if (timing == RDTSC) {
+        ret = static_cast<double>(tsc_t2 - tsc_t1);
+    } else if (timing == PERF_CPU_CYCLE) {
+        ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
+    } else {
+        std::cerr << "timing mechanism is unknown:" << timing << std::endl;
+        ret = 0.0;
+    }
 
     return ret;
 }
 
-void random_latency(int64_t buffer_size, int num_points, double* output, std::optional<std::vector<std::map<std::string, long long>>>& counters) {
+int32_t random_latency(int64_t buffer_size, 
+                       int num_points, 
+                       double* output, 
+                       std::optional<std::vector<std::map<std::string, long long>>>& counters,
+                       timing_mechanism_t timing) {
     // STEP 1 - prepare the cyclic linked list
     uint64_t* cll;
     int64_t num_entries = buffer_size / sizeof(uint64_t);
+#if USE_HUGEPAGE
+    cll = static_cast<uint64_t*>(mmap(ADDR, buffer_size, PROTECTION, FLAGS, -1, 0));
+    if (cll == MAP_FAILED) {
+        perror("mmap");
+        fprintf(stderr,"errno=%d\n", errno);
+        return -1;
+    }
+#else
     if(posix_memalign((void**)&cll, 4096, buffer_size) != 0) {
         fprintf(stderr, "fail to call posix_memalign. errno=%d\n", errno);
     }
+#endif
     if(fill_cyclic_linked_list(cll, num_entries) == false) {
         fprintf(stderr, "failed to fill the cyclic linked list.\n");
     }
@@ -294,16 +320,22 @@ void random_latency(int64_t buffer_size, int num_points, double* output, std::op
             volatile register uint64_t rx;
 #endif
             rx = cll[i];
+            rx = rx; //access rx to suppress the 'unused variable' warning.
         }
     }
 
 // STEP 4 - test
 #define NUMBER_OF_ACCESS (16 << 10)
     for(int i = 0; i < num_points; i++)
-        output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS, cll + (i % num_entries), counters) / NUMBER_OF_ACCESS;
+        output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS, cll + (i % num_entries), counters, timing) / NUMBER_OF_ACCESS;
 
     // STEP 5 - clean up
+#if USE_HUGEPAGE
+    munmap(cll,buffer_size);
+#else
     free(cll);
+#endif
+    return 0;
 }
 
 #ifdef UNIT_TEST

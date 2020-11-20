@@ -147,7 +147,7 @@ static void show_perf_counters(const std::string& series_name, double res[], std
     // data points
     uint32_t idx = 0;
     for (const auto& row:lpcs) {
-        std::cout << std::left << std::setw(32) << res[idx];
+        std::cout << std::left << std::setw(32) << res[idx++];
         for (const auto& kv:row) {
             std::cout << std::left << std::setw(16) << kv.second;
         }
@@ -316,7 +316,26 @@ static void run_seq_thp_schedule(const struct parsed_args& pargs) {
 }
 
 static void run_read_lat(const struct parsed_args& pargs) {
-    // TODO:
+    std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
+    double res[pargs.num_datapoints];
+    if (random_latency(pargs.buffer_size_kbytes<<10,pargs.num_datapoints,res,lpcs,pargs.timing_by) != 0){
+        std::cerr << "random_latency() failed." << std::endl;
+        return;
+    }
+
+    // TODO: use different timing mode.
+    const char* time_unit = "nsecs";
+    if (pargs.timing_by == RDTSC) {
+        time_unit = "TSC ticks";
+    } else if (pargs.timing_by == PERF_CPU_CYCLE) {
+        time_unit = "cpu cycles";
+    }
+    fprintf(stdout,"\nLATENCY %.3f %s std %.3f min %.3f max %.3f\n",
+            average(pargs.num_datapoints, res), time_unit, deviation(pargs.num_datapoints, res),
+            minimum(pargs.num_datapoints, res), maximum(pargs.num_datapoints, res));
+    if (pargs.show_perf) {
+        show_perf_counters("latency (" + std::string(time_unit) + ")", res, *lpcs);
+    }
 }
 
 int main(int argc, char** argv) {
