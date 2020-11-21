@@ -133,8 +133,8 @@ LinuxPerfCounters::LinuxPerfCounters() {
     counters.emplace("ref_cycles(hw)", LinuxPerfCounter("intel_ref_cycles", PERF_TYPE_RAW, 0x013c));
 #endif
 
-#if (USE_INTEL_LLC_HITS)
-    counters.emplace("llc_hits", LinuxPerfCounter("intel_llc_hits", PERF_TYPE_RAW, 0x4f2e));
+#if (USE_INTEL_LLC_REFS)
+    counters.emplace("llc_hits", LinuxPerfCounter("intel_llc_refs", PERF_TYPE_RAW, 0x4f2e));
 #endif
 
 #if (USE_INTEL_LLC_MISSES)
