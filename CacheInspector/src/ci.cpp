@@ -24,7 +24,8 @@ using namespace cacheinspector;
 #define OPT_TIMING_BY           "timing_by"
 #define OPT_TIMING_BY_GETTIME   "clock_gettime"
 #define OPT_TIMING_BY_RDTSC     "rdtsc"
-#define OPT_TIMING_BY_CPUCYCLE  "cpu_cycle"
+#define OPT_TIMING_BY_PERF_CPUCYCLE "perf_cpu_cycle"
+#define OPT_TIMING_BY_HW_CPUCYCLE   "hw_cpu_cycle"
 #define OPT_HELP                "help"
 
 #define HELP_INFO   \
@@ -36,19 +37,19 @@ using namespace cacheinspector;
     "   [--" OPT_TOT_SIZE " <total data size in MiB, default is 128MiB>]\n" \
     "   [--" OPT_NUM_DPS " <number of data points,default is 32>]\n" \
     "   [--" OPT_SHOW_PERF "]\n" \
-    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "\n2. Cache/Memory read latency test: --" OPT_READ_LAT "\n" \
     "Compulsory arguments:\n" \
     "   --" OPT_BUF_SIZE " <buffer size in KiB>\n" \
     "Optional arguments:\n" \
     "   [--" OPT_NUM_DPS " <number of data points,default is 32>]\n" \
-    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "   [--" OPT_SHOW_PERF "]\n" \
     "\n3. Cache/Memory throughput/latency test with schedule: --" OPT_SCHEDULE "\n" \
     "Compulsory arguments:\n" \
     "   --" OPT_SCHEDULE_FILE " <schedule file, please see default sample.schedule>\n" \
     "Optional arguments:\n" \
-    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "   [--" OPT_SHOW_PERF "]\n" \
     "\n4. Cache size test: --" OPT_CACHE_SIZE "\n" \
     "Compulsory arguments:\n" \
@@ -57,7 +58,7 @@ using namespace cacheinspector;
     "Optional arguments:\n" \
     "   [--" OPT_CACHE_SIZE_HINT " <the hint of the the cache size in KiB, default is 20480>]\n" \
     "   [--" OPT_NUM_DPS " <number of data points, default is 32>]\n" \
-    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "\n*. Print this message: --" OPT_HELP 
 
 static struct option long_options[] = {
@@ -95,8 +96,10 @@ struct parsed_args {
             timing_by = CLOCK_GETTIME;
         } else if (strcmp(OPT_TIMING_BY_RDTSC,timing_by_string) == 0) {
             timing_by = RDTSC;
-        } else if (strcmp(OPT_TIMING_BY_CPUCYCLE,timing_by_string) == 0) {
+        } else if (strcmp(OPT_TIMING_BY_PERF_CPUCYCLE,timing_by_string) == 0) {
             timing_by = PERF_CPU_CYCLE;
+        } else if (strcmp(OPT_TIMING_BY_HW_CPUCYCLE,timing_by_string) == 0) {
+            timing_by = HW_CPU_CYCLE;
         } else {
             // default
             timing_by = CLOCK_GETTIME;
@@ -161,7 +164,7 @@ static void run_seq_thp(const struct parsed_args& pargs) {
     double res[pargs.num_datapoints];
     std::optional<std::vector<std::map<std::string, long long>>> lpcs = std::vector<std::map<std::string, long long>>();
     const char* thp_unit = "GiB/s";
-    if (pargs.timing_by == PERF_CPU_CYCLE) {
+    if (pargs.timing_by == PERF_CPU_CYCLE || pargs.timing_by == HW_CPU_CYCLE) {
        thp_unit = "byte/cycle(CPU)";
     } else if (pargs.timing_by == RDTSC) {
         thp_unit = "byte/cycle(TSC)";
@@ -313,7 +316,7 @@ public:
             bool _show_perf = false) : timing(_timing),show_perf(_show_perf) {
         thp_unit = "GiB/s";
         lat_unit = "nsecs";
-        if (timing == PERF_CPU_CYCLE) {
+        if (timing == PERF_CPU_CYCLE || timing == HW_CPU_CYCLE) {
            thp_unit = "byte/cycle(CPU)";
            lat_unit = "cycle(CPU)";
         } else if (timing == RDTSC) {
@@ -380,7 +383,7 @@ static void run_read_lat(const struct parsed_args& pargs) {
     const char* time_unit = "nsecs";
     if (pargs.timing_by == RDTSC) {
         time_unit = "TSC ticks";
-    } else if (pargs.timing_by == PERF_CPU_CYCLE) {
+    } else if (pargs.timing_by == PERF_CPU_CYCLE || pargs.timing_by == HW_CPU_CYCLE) {
         time_unit = "cpu cycles";
     }
     fprintf(stdout,"\nLATENCY %.3f %s std %.3f min %.3f max %.3f\n",

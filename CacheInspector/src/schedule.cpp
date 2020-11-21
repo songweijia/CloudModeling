@@ -39,6 +39,12 @@ extern volatile int32_t ci_schedule (
     }
 #endif
 
+#if !USE_INTEL_CPU_CYCLES
+    if (timing == HW_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+    }
+#endif
+
     // STEP 1: get parameters
     uint64_t len_schedule = schedule.size();
     if (schedule.empty()) {

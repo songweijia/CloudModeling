@@ -43,6 +43,12 @@ extern int32_t volatile sequential_throughput(
     }
 #endif
 
+#if !USE_INTEL_CPU_CYCLES
+    if (timing == HW_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+    }
+#endif
+
     int ret = 0;
     struct timespec clk_ts, clk_te;
     uint64_t tsc_ts, tsc_te;
@@ -138,7 +144,26 @@ extern int32_t volatile sequential_throughput(
                     "js      done_write%= \n\t"
                     "movq    %%rax, %%rdx \n"
                     "write_next1k%=: \n\t"
-#if HAS_AVX2 || HAS_AVX
+#if HAS_AVX512
+                    // start writing
+                    "vmovdqu8 %%zmm0,   0(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm1,  64(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm2, 128(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm3, 192(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm4, 256(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm5, 320(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm6, 384(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm7, 448(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm8, 512(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm9, 576(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm10, 640(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm11, 704(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm12, 768(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm13, 832(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm14, 896(%%rdx) \n\t"
+                    "vmovdqu8 %%zmm15, 960(%%rdx) \n\t"
+                    // end writing
+#elif HAS_AVX2 || HAS_AVX
                     // using AVX/AVX2 instruction
                     // There are 16 256bit registers: YMM0-YMM15
                     // start writing
@@ -174,25 +199,6 @@ extern int32_t volatile sequential_throughput(
                     "vmovdqu %%ymm13, 928(%%rdx) \n\t"
                     "vmovdqu %%ymm14, 960(%%rdx) \n\t"
                     "vmovdqu %%ymm15, 992(%%rdx) \n\t"
-                    // end writing
-#elif HAS_AVX512
-                    // start writing
-                    "vmovdqu8 %%zmm0,   0(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm1,  64(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm2, 128(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm3, 192(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm4, 256(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm5, 320(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm6, 384(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm7, 448(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm8, 512(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm9, 576(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm10, 640(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm11, 704(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm12, 768(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm13, 832(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm14, 896(%%rdx) \n\t"
-                    "vmovdqu8 %%zmm15, 960(%%rdx) \n\t"
                     // end writing
 #else
                     // start writing
@@ -388,7 +394,26 @@ extern int32_t volatile sequential_throughput(
                     "js      done_read%= \n\t"
                     "movq    %%rax, %%rdx \n"
                     "read_next1k%=: \n\t"
-#if HAS_AVX2 || HAS_AVX
+#if HAS_AVX512
+                    // start reading
+                    "vmovdqu8   0(%%rdx), %%zmm0 \n\t"
+                    "vmovdqu8  64(%%rdx), %%zmm1 \n\t"
+                    "vmovdqu8 128(%%rdx), %%zmm2 \n\t"
+                    "vmovdqu8 192(%%rdx), %%zmm3 \n\t"
+                    "vmovdqu8 256(%%rdx), %%zmm4 \n\t"
+                    "vmovdqu8 320(%%rdx), %%zmm5 \n\t"
+                    "vmovdqu8 384(%%rdx), %%zmm6 \n\t"
+                    "vmovdqu8 448(%%rdx), %%zmm7 \n\t"
+                    "vmovdqu8 512(%%rdx), %%zmm8 \n\t"
+                    "vmovdqu8 576(%%rdx), %%zmm9 \n\t"
+                    "vmovdqu8 640(%%rdx), %%zmm10 \n\t"
+                    "vmovdqu8 704(%%rdx), %%zmm11 \n\t"
+                    "vmovdqu8 768(%%rdx), %%zmm12 \n\t"
+                    "vmovdqu8 832(%%rdx), %%zmm13 \n\t"
+                    "vmovdqu8 896(%%rdx), %%zmm14 \n\t"
+                    "vmovdqu8 960(%%rdx), %%zmm15 \n\t"
+                    // end reading
+#elif HAS_AVX2 || HAS_AVX
                     // using AVX/AVX2 instruction
                     // There are 16 256bit registers: YMM0-YMM15
                     // start reading
@@ -424,25 +449,6 @@ extern int32_t volatile sequential_throughput(
                     "vmovdqu 928(%%rdx), %%ymm13 \n\t"
                     "vmovdqu 960(%%rdx), %%ymm14 \n\t"
                     "vmovdqu 992(%%rdx), %%ymm15 \n\t"
-                    // end reading
-#elif HAS_AVX512
-                    // start reading
-                    "vmovdqu8   0(%%rdx), %%zmm0 \n\t"
-                    "vmovdqu8  64(%%rdx), %%zmm1 \n\t"
-                    "vmovdqu8 128(%%rdx), %%zmm2 \n\t"
-                    "vmovdqu8 192(%%rdx), %%zmm3 \n\t"
-                    "vmovdqu8 256(%%rdx), %%zmm4 \n\t"
-                    "vmovdqu8 320(%%rdx), %%zmm5 \n\t"
-                    "vmovdqu8 384(%%rdx), %%zmm6 \n\t"
-                    "vmovdqu8 448(%%rdx), %%zmm7 \n\t"
-                    "vmovdqu8 512(%%rdx), %%zmm8 \n\t"
-                    "vmovdqu8 576(%%rdx), %%zmm9 \n\t"
-                    "vmovdqu8 640(%%rdx), %%zmm10 \n\t"
-                    "vmovdqu8 704(%%rdx), %%zmm11 \n\t"
-                    "vmovdqu8 768(%%rdx), %%zmm12 \n\t"
-                    "vmovdqu8 832(%%rdx), %%zmm13 \n\t"
-                    "vmovdqu8 896(%%rdx), %%zmm14 \n\t"
-                    "vmovdqu8 960(%%rdx), %%zmm15 \n\t"
                     // end reading
 #else
                     // start reading
@@ -617,6 +623,8 @@ extern int32_t volatile sequential_throughput(
         // STEP 7 - calculate throguhput
         if (timing == PERF_CPU_CYCLE) {
             results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
+        } else if (timing == HW_CPU_CYCLE) {
+            results[iter] = (iter_per_iter)*buffer_size / static_cast<double>(lpcs.get().at("cpu_cycles(hw)"));
         } else if (timing == RDTSC) {
             results[iter] = THROUGHPUT_BYTES_PER_CYCLE((iter_per_iter)*buffer_size, tsc_ts, tsc_te);
         } else if (timing == CLOCK_GETTIME) {

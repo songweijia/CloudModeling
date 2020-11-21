@@ -10,7 +10,8 @@
 typedef enum {
     CLOCK_GETTIME,
     RDTSC,
-    PERF_CPU_CYCLE
+    PERF_CPU_CYCLE,
+    HW_CPU_CYCLE
 } timing_mechanism_t;
 
 #define RETURN_ON_ERROR(err,msg) \
