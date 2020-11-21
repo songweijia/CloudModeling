@@ -317,12 +317,18 @@ int32_t rand_latency(void* buffer,
     for(int l = 0; l < 5; l++) {
         for(int i = 0; i < num_entries; i += 8) {
 #if(__cplusplus - 0) >= 201703L
-            volatile uint64_t rx;
+            volatile uint64_t r1,r2,r3,r4;
 #else
-            volatile register uint64_t rx;
+            volatile register uint64_t r1,r2,r3,r4;
 #endif
-            rx = cll[i];
-            rx = rx; //access rx to suppress the 'unused variable' warning.
+            r1 = cll[i];
+            r2 = cll[i+1];
+            r3 = cll[i+2];
+            r4 = cll[i+3];
+            r1 = r2; //access rx to suppress the 'unused variable' warning.
+            r2 = r3;
+            r3 = r4;
+            r4 = r1;
         }
     }
 
