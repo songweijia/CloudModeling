@@ -10,7 +10,6 @@
 using namespace cacheinspector;
 
 #define OPT_SEQ_THP             "sequential_throughput"
-#define OPT_SEQ_THP_SCHEDULE    "sequential_throughput_schedule"
 #define OPT_READ_LAT            "read_latency"
 #define OPT_CACHE_SIZE          "cache_size"
 #define OPT_BUF_SIZE            "buffer_size"
@@ -452,7 +451,7 @@ int main(int argc, char** argv) {
         run_seq_thp(pargs);
     } else if (strcmp(pargs.cmd_name, OPT_READ_LAT) == 0) {
         run_read_lat(pargs);
-    } else if (strcmp(pargs.cmd_name, OPT_SEQ_THP_SCHEDULE) == 0) {
+    } else if (strcmp(pargs.cmd_name, OPT_SCHEDULE) == 0) {
         run_schedule(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
