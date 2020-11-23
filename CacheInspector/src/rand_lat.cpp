@@ -290,14 +290,14 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
 }
 
 int32_t rand_latency(void* buffer,
-                     int64_t buffer_size, 
-                     int num_points, 
+                     uint64_t buffer_size, 
+                     uint32_t num_points, 
                      double* output, 
                      std::optional<std::vector<std::map<std::string, long long>>>& counters,
                      timing_mechanism_t timing) {
     // STEP 1 - prepare the cyclic linked list
     uint64_t* cll = static_cast<uint64_t*>(buffer);
-    int64_t num_entries = buffer_size / sizeof(uint64_t);
+    uint64_t num_entries = buffer_size / sizeof(uint64_t);
     if (cll == nullptr) {
 #if USE_HUGEPAGE
         cll = static_cast<uint64_t*>(mmap(ADDR, buffer_size, PROTECTION, FLAGS, -1, 0));
@@ -328,27 +328,36 @@ int32_t rand_latency(void* buffer,
     }
 
     // STEP 3 - warm_up by scan the buffer 5 times.
+    boost_cpu();
     for(int l = 0; l < 5; l++) {
-        for(int i = 0; i < num_entries; i += 8) {
+        for(uint32_t i = 0; i < num_entries; i += 8) {
 #if(__cplusplus - 0) >= 201703L
-            volatile uint64_t r1,r2,r3,r4;
+            volatile uint64_t r1,r2,r3,r4,r5,r6,r7,r8;
 #else
             volatile register uint64_t r1,r2,r3,r4;
 #endif
-            r1 = cll[i];
+            r1 = cll[i+0];
             r2 = cll[i+1];
             r3 = cll[i+2];
             r4 = cll[i+3];
+            r5 = cll[i+4];
+            r6 = cll[i+5];
+            r7 = cll[i+6];
+            r8 = cll[i+7];
             r1 = r2; //access rx to suppress the 'unused variable' warning.
             r2 = r3;
             r3 = r4;
-            r4 = r1;
+            r4 = r5;
+            r5 = r6;
+            r6 = r7;
+            r7 = r8;
+            r8 = r1;
         }
     }
 
 // STEP 4 - test
 #define NUMBER_OF_ACCESS (16 << 10)
-    for(int i = 0; i < num_points; i++)
+    for(uint32_t i = 0; i < num_points; i++)
         output[i] = traverse_cyclic_linked_list(NUMBER_OF_ACCESS, cll + (i % num_entries), counters, timing) / NUMBER_OF_ACCESS;
 
     // STEP 5 - clean up

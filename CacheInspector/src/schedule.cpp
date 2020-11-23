@@ -80,8 +80,8 @@ extern volatile int32_t ci_schedule (
         uint64_t num_iter_warmup = schedule[i].thp_num_datapoints/6;
         if (num_iter_warmup == 0) num_iter_warmup = 1;
         if (num_iter_warmup > 5) num_iter_warmup = 5;
-
-        double iter_results[schedule[i].thp_num_datapoints];
+#define MAX(x,y) ((x)>(y)?(x):(y))
+        double iter_results[MAX(schedule[i].thp_num_datapoints,schedule[i].lat_num_datapoints)];
         auto lpcs = std::optional<std::vector<std::map<std::string, long long>>>();
         if (show_perf_counters) {
             lpcs = std::vector<std::map<std::string, long long>>();

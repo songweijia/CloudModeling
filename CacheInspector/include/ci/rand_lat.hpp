@@ -18,8 +18,8 @@
  * @return 0 for success, other values for failure.
  */
 int32_t rand_latency(void* buffer,
-                     int64_t buffer_size, 
-                     int num_points,
+                     uint64_t buffer_size, 
+                     uint32_t num_points,
                      double* output,
                      std::optional<std::vector<std::map<std::string, long long>>>& counters,
                      timing_mechanism_t timing=CLOCK_GETTIME);
