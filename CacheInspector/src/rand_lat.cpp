@@ -95,6 +95,18 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
     struct timespec clk_t1, clk_t2;
     uint64_t tsc_t1 = 0, tsc_t2 = 0;
 
+#if !USE_PERF_CPU_CYCLES
+    if (timing == PERF_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_PERF_CPU_CYCLES to use cpu cycle timing.");
+    }
+#endif
+
+#if !USE_INTEL_CPU_CYCLES
+    if (timing == HW_CPU_CYCLE) {
+        RETURN_ON_ERROR(-0xffff, "Please enable compilation option:USE_INTEL_CPU_CYCLES to use cpu cycle timing.");
+    }
+#endif
+
     if (timing == CLOCK_GETTIME) {
         if(clock_gettime(CLOCK_MONOTONIC, &clk_t1) < 0) {
             fprintf(stderr, "failed to call clock_gettime().\n");
@@ -267,6 +279,8 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
         ret = static_cast<double>(tsc_t2 - tsc_t1);
     } else if (timing == PERF_CPU_CYCLE) {
         ret = static_cast<double>(lpcs.get().at("cpu_cycles(pf)"));
+    } else if (timing == HW_CPU_CYCLE) {
+        ret = static_cast<double>(lpcs.get().at("cpu_cycles(hw)"));
     } else {
         std::cerr << "timing mechanism is unknown:" << timing << std::endl;
         ret = 0.0;
