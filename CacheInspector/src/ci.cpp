@@ -328,7 +328,7 @@ public:
                                     const double results[],
                                     const std::optional<std::vector<std::map<std::string, long long>>>& lpcs) override {
         const char* read_write = (is_write?"WRITE":"READ");
-        fprintf(stdout,"\n%s %.3f %s std %.3f min %.3f max %.3f\n", read_write,
+        fprintf(stdout,"\n%s @%lu %.3f %s std %.3f min %.3f max %.3f\n", read_write, buffer_size,
                 average(num_datapoints, results), thp_unit, deviation(num_datapoints, results),
                 minimum(num_datapoints, results), maximum(num_datapoints, results));
         if (show_perf) {
@@ -340,7 +340,7 @@ public:
                                  const uint64_t num_datapoints,
                                  const double results[],
                                  const std::optional<std::vector<std::map<std::string, long long>>>& lpcs) override{
-        fprintf(stdout,"\nLATENCY %.3f %s std %.3f min %.3f max %.3f\n",
+        fprintf(stdout,"\nLATENCY @%lu %.3f %s std %.3f min %.3f max %.3f\n", buffer_size,
                 average(num_datapoints, results), lat_unit, deviation(num_datapoints, results),
                 minimum(num_datapoints, results), maximum(num_datapoints, results));
         if (show_perf) {
