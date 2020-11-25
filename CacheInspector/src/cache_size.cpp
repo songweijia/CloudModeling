@@ -22,6 +22,7 @@ static int32_t binary_search(
         const double* target_thps,
         const int num_samples,
         const bool is_write,
+        const timing_mechanism_t timing,
         const int32_t search_depth,
         void* workspace,  // a memory workspace with MEM_ALLOCATION 256MiB.
         uint32_t* output,
@@ -56,7 +57,7 @@ static int32_t binary_search(
             ret = sequential_throughput(workspace, buffer_size,
                                         num_iter_per_sample, thps,
                                         no_counters,  // not using the counters.
-                                        CLOCK_GETTIME,
+                                        timing,
                                         is_write, num_bytes_per_iter);
             RETURN_ON_ERROR(ret, "sequential_throughput");
             double v = average(num_iter_per_sample, thps);
@@ -95,7 +96,7 @@ static int32_t binary_search(
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
             npivot,
-            target_thps + nofst, nlen, is_write,
+            target_thps + nofst, nlen, is_write, timing,
             search_depth - 1, workspace, output + nofst,
             num_iter_per_sample, num_bytes_per_iter, nlb, nub);
     RETURN_ON_ERROR(ret, "binary_search, upper half");
@@ -111,7 +112,7 @@ static int32_t binary_search(
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
             npivot,
-            target_thps + nofst, nlen, is_write,
+            target_thps + nofst, nlen, is_write, timing,
             search_depth - 1, workspace, output + nofst,
             num_iter_per_sample, num_bytes_per_iter, nlb, nub);
     RETURN_ON_ERROR(ret, "binary_search, lower half");
@@ -126,6 +127,7 @@ int eval_cache_size(
         uint32_t* css,
         const int num_samples,
         const bool is_write,
+        const timing_mechanism_t timing,
         const int32_t search_depth,
         const uint32_t num_iter_per_sample,
         const uint64_t num_bytes_per_iter) {
@@ -134,16 +136,10 @@ int eval_cache_size(
 
     boost_cpu();
 #if USE_HUGEPAGE
-#define FILE_NAME "/mnt/huge/hugepagefile"
 #define ADDR (void*)(0x8000000000000000UL)
-#define PROTECTION (PROT_READ | PROT_WRITE)
-#define FLAGS (MAP_SHARED)
-    int fd = open(FILE_NAME, O_CREAT | O_RDWR, 0755);
-    if(fd < 0) {
-        perror("Open file failed. Is hugetlbfs mounted?");
-        exit(1);
-    }
-    ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, fd, 0);
+#define PROTECTION (PROT_READ | PROT_WRITE )
+#define FLAGS (MAP_SHARED | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
+    ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, -1, 0);
     if(ws == MAP_FAILED) {
         perror("mmap");
         unlink(FILE_NAME);
@@ -173,7 +169,9 @@ int eval_cache_size(
             bs_log,
             search_depth,
 #endif  //LOG_BINARY_SEARCH
-            cache_size_hint_KiB, thps, num_samples, is_write, search_depth, ws, css, num_iter_per_sample, num_bytes_per_iter);
+            cache_size_hint_KiB, thps, num_samples,
+            is_write, timing, search_depth, ws, css,
+            num_iter_per_sample, num_bytes_per_iter);
     RETURN_ON_ERROR(ret, "binary_search");
 
 #ifdef LOG_BINARY_SEARCH

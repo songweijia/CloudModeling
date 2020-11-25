@@ -21,6 +21,7 @@ using namespace cacheinspector;
 #define OPT_FASTER_TIER_THP     "faster_throughput"
 #define OPT_SLOWER_TIER_THP     "slower_throughput"
 #define OPT_CACHE_SIZE_HINT     "cache_size_hint"
+#define OPT_IS_WRITE            "is_write"
 #define OPT_TIMING_BY           "timing_by"
 #define OPT_TIMING_BY_GETTIME   "clock_gettime"
 #define OPT_TIMING_BY_RDTSC     "rdtsc"
@@ -53,11 +54,12 @@ using namespace cacheinspector;
     "   [--" OPT_SHOW_PERF "]\n" \
     "\n4. Cache size test: --" OPT_CACHE_SIZE "\n" \
     "Compulsory arguments:\n" \
-    "   --" OPT_FASTER_TIER_THP " <the throughput of the faster cache tier in GiB/s>\n" \
-    "   --" OPT_SLOWER_TIER_THP " <the throughput of the slower cache tier in GiB/s>\n" \
+    "   --" OPT_FASTER_TIER_THP " <the throughput of the faster cache tier in GiB/s (CLOCK_GETTIME) or Bytes/tick (RDTSC) or Bytes/cycle (*_CPU_CYCLE)>\n" \
+    "   --" OPT_SLOWER_TIER_THP " <the throughput of the slower cache tier in GiB/s (CLOCK_GETTIME) or Bytes/tick (RDTSC) or Bytes/cycle (*_CPU_CYCLE)>\n" \
     "Optional arguments:\n" \
+    "   [--" OPT_IS_WRITE "] This option specifies that given throughput numbers are for write. If not specified, those numbers are for read.\n" \
     "   [--" OPT_CACHE_SIZE_HINT " <the hint of the the cache size in KiB, default is 20480>]\n" \
-    "   [--" OPT_NUM_DPS " <number of data points, default is 32>]\n" \
+    "   [--" OPT_NUM_DPS " <number of data points, default is 1>]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "\n*. Print this message: --" OPT_HELP 
 
@@ -74,6 +76,7 @@ static struct option long_options[] = {
     {OPT_FASTER_TIER_THP,   required_argument,0,0},
     {OPT_SLOWER_TIER_THP,   required_argument,0,0},
     {OPT_CACHE_SIZE_HINT,   required_argument,0,0},
+    {OPT_IS_WRITE,          no_argument,0,0},
     {OPT_TIMING_BY,         required_argument,0,0},
     {OPT_HELP,              no_argument,0,'h'}
 };
@@ -88,6 +91,7 @@ struct parsed_args {
     double      faster_thp = -1.0f;
     double      slower_thp = -1.0f;
     uint64_t    cache_size_hint_kbytes = 0;
+    bool        is_write = false;
     timing_mechanism_t  timing_by = CLOCK_GETTIME;
     bool        request_help = false;
 
@@ -114,7 +118,7 @@ struct parsed_args {
         } else if (strcmp(cmd,OPT_READ_LAT) == 0) {
             if (num_datapoints == 0)num_datapoints = 32;
         } else if (strcmp(cmd,OPT_CACHE_SIZE) == 0) {
-            if (num_datapoints == 0)num_datapoints = 32;
+            if (num_datapoints == 0)num_datapoints = 1;
             if (cache_size_hint_kbytes == 0)cache_size_hint_kbytes = 20480;
         }
     }
@@ -394,6 +398,24 @@ static void run_read_lat(const struct parsed_args& pargs) {
     }
 }
 
+static void run_cache_size(const struct parsed_args& pargs) {
+    uint32_t res[pargs.num_datapoints];
+    if (eval_cache_size(pargs.cache_size_hint_kbytes,
+                        pargs.faster_thp,
+                        pargs.slower_thp,
+                        res,
+                        pargs.num_datapoints,
+                        pargs.is_write,
+                        pargs.timing_by) != 0) {
+        std::cerr << "eval_cache_size() failed." << std::endl;
+        return;
+    } else {
+        for (uint32_t i=0;i<pargs.num_datapoints;i++) {
+            fprintf(stdout,"[%d] %d KiB\n", i, res[i]); 
+        }
+    }
+}
+
 int main(int argc, char** argv) {
     struct parsed_args pargs;
     while (1) {
@@ -432,6 +454,8 @@ int main(int argc, char** argv) {
                 pargs.cache_size_hint_kbytes= std::stoull(optarg);
             } else if (strcmp(long_options[option_index].name,OPT_TIMING_BY) == 0) {
                 pargs.set_timing_by(optarg);
+            } else if (strcmp(long_options[option_index].name,OPT_IS_WRITE) == 0) {
+                pargs.is_write = false;
             } else {
                 std::cerr << "Unknown argument:" << long_options[option_index].name << std::endl;
                 std::cout << HELP_INFO << std::endl;
@@ -456,6 +480,8 @@ int main(int argc, char** argv) {
         run_read_lat(pargs);
     } else if (strcmp(pargs.cmd_name, OPT_SCHEDULE) == 0) {
         run_schedule(pargs);
+    } else if (strcmp(pargs.cmd_name, OPT_CACHE_SIZE) == 0) {
+        run_cache_size(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
     }
