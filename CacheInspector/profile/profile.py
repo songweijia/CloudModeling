@@ -235,12 +235,16 @@ if __name__ == '__main__':
         print ("Usage %s <schedule output file>" % sys.argv[0])
         quit(-1)
     r,w,l,ru,wu,lu = parse_schedule_file(sys.argv[1]);
-    np.savetxt("read_throughput",r)
-    # read_throughput = detect_cache_throughput_by_curve_fit(r,3,[32768,262144,16384*1024],[100,50,30,10],draw_graph=True,unit=ru)
-    read_thps = detect_cache_throughput_by_kde(r,3,draw_graph=True,is_write=False)
-    print(str(read_thps))
-    np.savetxt("write_throughput",w)
-    write_thps = detect_cache_throughput_by_kde(w,3,draw_graph=True,is_write=True)
-    print(str(write_thps))
-    np.savetxt("latency",l)
-    latencies = detect_cache_latency(l,3,[32768,262144,16384*1024],[1.0,5.0,12.0,200.0],draw_graph=True,unit=lu)
+    if r.size > 0:
+        np.savetxt("read_throughput",r)
+        # read_throughput = detect_cache_throughput_by_curve_fit(r,3,[32768,262144,16384*1024],[100,50,30,10],draw_graph=True,unit=ru)
+        read_thps = detect_cache_throughput_by_kde(r,3,draw_graph=True,is_write=False)
+        print(str(read_thps))
+    if w.size > 0:
+        np.savetxt("write_throughput",w)
+        write_thps = detect_cache_throughput_by_kde(w,3,draw_graph=True,is_write=True)
+        print(str(write_thps))
+    if l.size > 0:
+        np.savetxt("latency",l)
+        latencies = detect_cache_latency(l,3,[32768,262144,16384*1024],[1.0,5.0,12.0,200.0],draw_graph=True,unit=lu)
+        print(str(latencies))
