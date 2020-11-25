@@ -76,64 +76,68 @@ extern volatile int32_t ci_schedule (
 
     // STEP 3: do tests
     for (uint64_t i=0;i<len_schedule;i++) {
-        // 3.1 - run throughput test
-        uint64_t num_iter_warmup = schedule[i].thp_num_datapoints/6;
-        if (num_iter_warmup == 0) num_iter_warmup = 1;
-        if (num_iter_warmup > 5) num_iter_warmup = 5;
 #define MAX(x,y) ((x)>(y)?(x):(y))
         double iter_results[MAX(schedule[i].thp_num_datapoints,schedule[i].lat_num_datapoints)];
         auto lpcs = std::optional<std::vector<std::map<std::string, long long>>>();
-        if (show_perf_counters) {
-            lpcs = std::vector<std::map<std::string, long long>>();
-        }
-
-        // read throughput
-        if (sequential_throughput(buf,
-                                  schedule[i].buffer_size,
-                                  schedule[i].thp_num_datapoints,
-                                  iter_results,
-                                  lpcs,
-                                  timing,
-                                  0,
-                                  schedule[i].total_data_size)) {
-            RETURN_ON_ERROR(-4, "Read test with sequential_throughput() failed.");
-        } else {
-            collector.collect_throughput(false,
-                                         schedule[i].buffer_size,
-                                         schedule[i].thp_num_datapoints,
-                                         iter_results,lpcs);
-            if (lpcs) (*lpcs).clear();
-        }
-        // write throughput
-        if (sequential_throughput(buf,
-                                  schedule[i].buffer_size,
-                                  schedule[i].thp_num_datapoints,
-                                  iter_results,
-                                  lpcs,
-                                  timing,
-                                  1,
-                                  schedule[i].total_data_size)) {
-            RETURN_ON_ERROR(-4, "Write test with sequential_throughput() failed.");
-        } else {
-            collector.collect_throughput(true,
-                                         schedule[i].buffer_size,
-                                         schedule[i].thp_num_datapoints,
-                                         iter_results,lpcs);
-            if (lpcs) (*lpcs).clear();
+        // 3.1 - run throughput test
+        if (schedule[i].enable_thp){
+            uint64_t num_iter_warmup = schedule[i].thp_num_datapoints/6;
+            if (num_iter_warmup == 0) num_iter_warmup = 1;
+            if (num_iter_warmup > 5) num_iter_warmup = 5;
+            if (show_perf_counters) {
+                lpcs = std::vector<std::map<std::string, long long>>();
+            }
+    
+            // read throughput
+            if (sequential_throughput(buf,
+                                      schedule[i].buffer_size,
+                                      schedule[i].thp_num_datapoints,
+                                      iter_results,
+                                      lpcs,
+                                      timing,
+                                      0,
+                                      schedule[i].total_data_size)) {
+                RETURN_ON_ERROR(-4, "Read test with sequential_throughput() failed.");
+            } else {
+                collector.collect_throughput(false,
+                                             schedule[i].buffer_size,
+                                             schedule[i].thp_num_datapoints,
+                                             iter_results,lpcs);
+                if (lpcs) (*lpcs).clear();
+            }
+            // write throughput
+            if (sequential_throughput(buf,
+                                      schedule[i].buffer_size,
+                                      schedule[i].thp_num_datapoints,
+                                      iter_results,
+                                      lpcs,
+                                      timing,
+                                      1,
+                                      schedule[i].total_data_size)) {
+                RETURN_ON_ERROR(-4, "Write test with sequential_throughput() failed.");
+            } else {
+                collector.collect_throughput(true,
+                                             schedule[i].buffer_size,
+                                             schedule[i].thp_num_datapoints,
+                                             iter_results,lpcs);
+                if (lpcs) (*lpcs).clear();
+            }
         }
         // 3.2 - run latency test
-        if (rand_latency(buf,
-                         schedule[i].buffer_size,
-                         schedule[i].lat_num_datapoints,
-                         iter_results,
-                         lpcs,
-                         timing)) {
-            RETURN_ON_ERROR(-5, "Latency test with rand_latency() failed.");
-        } else {
-            collector.collect_latency(schedule[i].buffer_size,
-                                      schedule[i].lat_num_datapoints,
-                                      iter_results,lpcs);
-            if (lpcs) (*lpcs).clear();
+        if (schedule[i].enable_lat){
+            if (rand_latency(buf,
+                             schedule[i].buffer_size,
+                             schedule[i].lat_num_datapoints,
+                             iter_results,
+                             lpcs,
+                             timing)) {
+                RETURN_ON_ERROR(-5, "Latency test with rand_latency() failed.");
+            } else {
+                collector.collect_latency(schedule[i].buffer_size,
+                                          schedule[i].lat_num_datapoints,
+                                          iter_results,lpcs);
+                if (lpcs) (*lpcs).clear();
+            }
         }
     }
 
