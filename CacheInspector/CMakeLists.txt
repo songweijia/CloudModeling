@@ -3,9 +3,11 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 project(cacheinspector C CXX)
 
+include(GNUInstallDirs)
+
 # Version
-set(cacheinspector 0.9)
-set(cacheinspector_build_version 0.9.1)
+set(ci_VERSION 1.0)
+set(ci_build_VERSION 1.0.0)
 
 # CFLAGS
 set(CMAKE_CXX_STANDARD 17)
@@ -85,6 +87,10 @@ target_include_directories(ci PUBLIC
 if (${ENABLE_PERF_TRACEPOINT} EQUAL 1)
     add_dependencies(ci ci-tracepoint-header)
 endif()
+set_target_properties(ci PROPERTIES
+    SOVERSION ${ci_VERSION}
+    VERSION ${ci_build_VERSION}
+)
 
 add_executable(ci-bin src/ci.cpp)
 target_include_directories(ci-bin PRIVATE
@@ -97,3 +103,19 @@ add_custom_command(TARGET ci-bin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/sample.schedule
     ${CMAKE_CURRENT_BINARY_DIR}/
 )
+
+# make install
+install(TARGETS ci EXPORT ci
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/)
+install(DIRECTORY
+        ${CMAKE_SOURCE_DIR}/include/ci
+        ${CMAKE_BINARY_DIR}/include/ci
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "*.hpp")
+install(TARGETS ci-bin EXPORT ci-bin
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}/)
+install(FILES ${CMAKE_SOURCE_DIR}/profile/profile.py
+        PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE
+        DESTINATION ${CMAKE_INSTALL_BINDIR}/)
