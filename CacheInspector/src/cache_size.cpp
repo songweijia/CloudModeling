@@ -18,6 +18,7 @@ namespace cacheinspector {
 static int32_t binary_search(
 #if LOG_BINARY_SEARCH
         int32_t* bs_log,
+        double* bs_log_thp,
         const int32_t tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
         const uint32_t seed_KiB,
@@ -80,6 +81,7 @@ static int32_t binary_search(
             else
                 pivot = new_pivot;
 #if LOG_BINARY_SEARCH
+            bs_log_thp[(tot_search_depth - loop - 1) + (tot_search_depth + 1) * (num_samples / 2)] = v;
             bs_log[(tot_search_depth - loop) + (tot_search_depth + 1) * (num_samples / 2)] = pivot;
 #endif  //LOG_BINARY_SEARCH
         }
@@ -95,6 +97,7 @@ static int32_t binary_search(
     ret = binary_search(
 #if LOG_BINARY_SEARCH
             bs_log,
+            bs_log_thp,
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
             npivot,
@@ -111,6 +114,7 @@ static int32_t binary_search(
     ret = binary_search(
 #if LOG_BINARY_SEARCH
             bs_log,
+            bs_log_thp,
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
             npivot,
@@ -158,16 +162,19 @@ int eval_cache_size(
 #if LOG_BINARY_SEARCH
     const int num_log_entry = num_samples * (search_depth + 1);
     int32_t* bs_log = (int32_t*)malloc(num_log_entry * sizeof(int32_t));
-    if(bs_log == nullptr) {
+    double* bs_log_thp = (double*)malloc(num_log_entry * sizeof(double));
+    if(bs_log == nullptr || bs_log_thp == nullptr) {
         fprintf(stderr, "failed to allocate log entry.\n");
         return -1;
     }
     bzero((void*)bs_log, num_log_entry * sizeof(int32_t));
+    bzero((void*)bs_log_thp, num_log_entry * sizeof(double));
 #endif
 
     ret = binary_search(
 #if LOG_BINARY_SEARCH
             bs_log,
+            bs_log_thp,
             search_depth,
 #endif  //LOG_BINARY_SEARCH
             cache_size_hint_KiB, thps, num_samples,
@@ -180,7 +187,7 @@ int eval_cache_size(
     for(int i = 0; i < num_samples; i++) {
         printf("\t");
         for(int j = 0; j <= search_depth; j++)
-            printf("%d,", bs_log[i * (search_depth + 1) + j]);
+            printf("(%d,%.2f), ", bs_log[i * (search_depth + 1) + j], bs_log_thp[i * (search_depth +1) + j]);
         printf("\n");
     }
 #endif  //LOG_BINARY_SEARCH
