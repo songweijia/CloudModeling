@@ -136,24 +136,31 @@ int eval_cache_size(
         const timing_mechanism_t timing,
         const int32_t search_depth,
         const uint32_t num_iter_per_sample,
-        const uint64_t num_bytes_per_iter) {
+        const uint64_t num_bytes_per_iter,
+        void* buf,
+        const uint64_t buf_size,
+        const bool warm_up_cpu) {
     int i, ret;
-    void* ws;
+    void* ws = buf;
 
-    boost_cpu();
+    if (buf == nullptr) {
 #if USE_HUGEPAGE
 #define ADDR (void*)(0x8000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE )
 #define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
-    ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, -1, 0);
-    if(ws == MAP_FAILED) {
-        perror("mmap");
-        exit(1);
-    }
+        ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, -1, 0);
+        if(ws == MAP_FAILED) {
+            perror("mmap");
+            exit(1);
+        }
 #else
-    ret = posix_memalign(&ws, BUFFER_ALIGNMENT, MEM_ALLOCATION);
-    RETURN_ON_ERROR(ret, "posix_memalign()");
+        ret = posix_memalign(&ws, BUFFER_ALIGNMENT, MEM_ALLOCATION);
+        RETURN_ON_ERROR(ret, "posix_memalign()");
 #endif
+    } else if (buf_size < MEM_ALLOCATION) {
+        ret = EINVAL;
+        RETURN_ON_ERROR(ret, "buf_size should be at least 256MiB");
+    }
 
     double thps[num_samples];
     for(i = 0; i < num_samples; i++)
@@ -170,6 +177,18 @@ int eval_cache_size(
     bzero((void*)bs_log, num_log_entry * sizeof(int32_t));
     bzero((void*)bs_log_thp, num_log_entry * sizeof(double));
 #endif
+    // before we do binary search, we warm up the buffer and cpu together.
+    if (warm_up_cpu) {
+        double thps[num_iter_per_sample];
+        std::optional<std::vector<std::map<std::string, long long>>> no_counters;
+        for (int i=0;i<5;i++) {
+            ret = sequential_throughput(ws,MEM_ALLOCATION,
+                                        num_iter_per_sample, thps,
+                                        no_counters,  // not using the counters.
+                                        timing,
+                                        is_write, num_bytes_per_iter);
+        }
+    }
 
     ret = binary_search(
 #if LOG_BINARY_SEARCH
@@ -192,11 +211,13 @@ int eval_cache_size(
     }
 #endif  //LOG_BINARY_SEARCH
 
+    if (buf == nullptr) {
 #if USE_HUGEPAGE
-    munmap(ws, MEM_ALLOCATION);
+        munmap(ws, MEM_ALLOCATION);
 #else
-    free(ws);
+        free(ws);
 #endif
+    }
 
     return ret;
 }
