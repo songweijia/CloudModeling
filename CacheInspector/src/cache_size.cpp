@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <ci/config.h>
+
 #if USE_HUGEPAGE
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -14,7 +16,7 @@
 #define MEM_ALLOCATION (256ull << 20)
 namespace cacheinspector {
 static int32_t binary_search(
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
         int32_t* bs_log,
         const int32_t tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
@@ -47,7 +49,7 @@ static int32_t binary_search(
     uint32_t ret = 0;
 
     int loop = search_depth;
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
     bs_log[(tot_search_depth - loop) + (tot_search_depth + 1) * (num_samples / 2)] = pivot;
 #endif  //LOG_BINARY_SEARCH
     std::optional<std::vector<std::map<std::string, long long>>> no_counters;
@@ -77,7 +79,7 @@ static int32_t binary_search(
                 break;
             else
                 pivot = new_pivot;
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
             bs_log[(tot_search_depth - loop) + (tot_search_depth + 1) * (num_samples / 2)] = pivot;
 #endif  //LOG_BINARY_SEARCH
         }
@@ -91,7 +93,7 @@ static int32_t binary_search(
     uint32_t nlb = LB;
     uint32_t nub = pivot;
     ret = binary_search(
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
             bs_log,
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
@@ -107,7 +109,7 @@ static int32_t binary_search(
     nlb = pivot;
     nub = ub;
     ret = binary_search(
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
             bs_log,
             tot_search_depth,
 #endif  //LOG_BINARY_SEARCH
@@ -138,11 +140,10 @@ int eval_cache_size(
 #if USE_HUGEPAGE
 #define ADDR (void*)(0x8000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE )
-#define FLAGS (MAP_SHARED | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
+#define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
     ws = mmap(ADDR, MEM_ALLOCATION, PROTECTION, FLAGS, -1, 0);
     if(ws == MAP_FAILED) {
         perror("mmap");
-        unlink(FILE_NAME);
         exit(1);
     }
 #else
@@ -154,7 +155,7 @@ int eval_cache_size(
     for(i = 0; i < num_samples; i++)
         thps[i] = upper_thp - (upper_thp - lower_thp) * (i + 1) / (num_samples + 1);
 
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
     const int num_log_entry = num_samples * (search_depth + 1);
     int32_t* bs_log = (int32_t*)malloc(num_log_entry * sizeof(int32_t));
     if(bs_log == nullptr) {
@@ -165,7 +166,7 @@ int eval_cache_size(
 #endif
 
     ret = binary_search(
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
             bs_log,
             search_depth,
 #endif  //LOG_BINARY_SEARCH
@@ -174,7 +175,7 @@ int eval_cache_size(
             num_iter_per_sample, num_bytes_per_iter);
     RETURN_ON_ERROR(ret, "binary_search");
 
-#ifdef LOG_BINARY_SEARCH
+#if LOG_BINARY_SEARCH
     printf("search log:\n");
     for(int i = 0; i < num_samples; i++) {
         printf("\t");
@@ -186,8 +187,6 @@ int eval_cache_size(
 
 #if USE_HUGEPAGE
     munmap(ws, MEM_ALLOCATION);
-    close(fd);
-    unlink(FILE_NAME);
 #else
     free(ws);
 #endif
