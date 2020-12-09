@@ -45,7 +45,7 @@ static uint64_t xorshf96() {
 
 static bool initialize_random_seed() {
     struct timespec ts;
-    if(clock_gettime(CLOCK_REALTIME, &ts) < 0) {
+    if(clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
         fprintf(stderr, "clock_gettime() failed.\n");
         return false;
     }

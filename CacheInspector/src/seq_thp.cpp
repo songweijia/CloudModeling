@@ -89,7 +89,7 @@ extern int32_t volatile sequential_throughput(
 
         // STEP 4 - start the timer
         if (timing == CLOCK_GETTIME) {
-            ret = clock_gettime(CLOCK_REALTIME, &clk_ts);
+            ret = clock_gettime(CLOCK_MONOTONIC, &clk_ts);
             RETURN_ON_ERROR(ret, "clock_gettime");
         } else if (timing == RDTSC) {
             tsc_ts = rdtsc();
@@ -612,7 +612,7 @@ extern int32_t volatile sequential_throughput(
 
         // STEP 6 - end the timer
         if (timing == CLOCK_GETTIME) {
-            ret = clock_gettime(CLOCK_REALTIME, &clk_te);
+            ret = clock_gettime(CLOCK_MONOTONIC, &clk_te);
             RETURN_ON_ERROR(ret, "clock_gettime");
         } else if (timing == RDTSC) {
             tsc_te = rdtsc();
