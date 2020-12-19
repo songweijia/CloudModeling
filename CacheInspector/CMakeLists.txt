@@ -52,6 +52,9 @@ execute_process(COMMAND lscpu
 execute_process(COMMAND lscpu
                 COMMAND grep -o "avx512"
                 RESULT_VARIABLE TEST_AVX512)
+execute_process(COMMAND lscpu
+                COMMAND grep -o "asimd"
+                RESULT_VARIABLE TEST_ASIMD)
 
 if (${TEST_AVX512} EQUAL 0)
     set(HAS_AVX512 1)
@@ -61,6 +64,9 @@ if (${TEST_AVX2} EQUAL 0)
 endif()
 if (${TEST_AVX} EQUAL 0)
     set(HAS_AVX 1)
+endif()
+if (${TEST_ASIMD} EQUAL 0)
+    set(HAS_ASIMD 1)
 endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/include/ci/config.h.in ${CMAKE_BINARY_DIR}/include/ci/config.h)

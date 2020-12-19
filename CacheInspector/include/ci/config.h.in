@@ -1,6 +1,7 @@
 #cmakedefine01 HAS_AVX512
 #cmakedefine01 HAS_AVX2
 #cmakedefine01 HAS_AVX
+#cmakedefine01 HAS_ASIMD
 #cmakedefine01 USE_PERF_SCHED_SWITCH
 #cmakedefine01 USE_PERF_CPU_CYCLES
 #cmakedefine01 USE_PERF_BUS_CYCLES
