@@ -114,15 +114,25 @@ Once it is finished, you can call the profiling tool to get the throughput and l
 ```
 It will generate pdf files like the followings:
 <table>
+  <tr><td colspan="3">Intel Xeon E5-2690 v0</td></tr>
   <tr>
     <td>latency profile</td>
     <td>read throughput profile</td>
-    <td>write throughput profile</td>
   </tr>
   <tr>
     <td><img src=showcase/read_throughput.png></td>
-    <td><img src=showcase/write_throughput.png></td>
     <td><img src=showcase/latency.png></td>
+  </tr>
+</table>
+<table>
+  <tr><td colspan="2">X Gene APM883208 X-1 </td></tr>
+  <tr>
+    <td>latency profile</td>
+    <td>read throughput profile</td>
+  </tr>
+  <tr>
+    <td><img src=showcase/APM883208X1/read_throughput.png></td>
+    <td><img src=showcase/APM883208X1/latency.png></td>
   </tr>
 </table>
 
