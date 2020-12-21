@@ -459,12 +459,45 @@ extern void destroy_cache_info(const char* ci_shm_file);
 #define RUNAPP_INTERVAL_USEC (1000000)
 
 static void run_app(const struct parsed_args& pargs) {
+    // check args
+    if (pargs.faster_thp < 0 || pargs.slower_thp < 0) {
+        std::cerr << "Please specify valid faster throughput and slower throughput by --" << OPT_FASTER_TIER_THP << " and --" << OPT_SLOWER_TIER_THP << std::endl;
+        return;
+    }
+    if (pargs.app_cmdline == nullptr) {
+        std::cerr << "Please specify application command by --" << OPT_CMDLINE << std::endl;
+        return;
+    }
     // prepare the shared memory map
     cache_info_t* cinfo = initialize_cache_info(pargs.cache_info_file);
     cinfo->page.cache_size[0] = 0xaaaaaaaalu; // initial value;
     pid_t pid = fork();
     if (pid != 0) {
         // parent
+        // prepare the buffer
+        const uint64_t max_buffer_size = (1ull<<27); // 128MB
+        void* buf = nullptr;
+#if USE_HUGEPAGE
+#define ADDR (void*)(0x6000000000000000UL)
+#define PROTECTION (PROT_READ | PROT_WRITE)
+#define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
+        buf = mmap(ADDR, max_buffer_size, PROTECTION, FLAGS, -1, 0);
+        if (buf == MAP_FAILED) {
+            perror("mmap");
+            std::cerr << "failed to allocate buffer with hugepages:" << strerror(errno) << std::endl;
+            return;
+        }
+#else
+        if (posix_memalign(&buf, page_size, max_buffer_size)) {
+            perror("posix_memalign");
+            std::cerr << "failed to allocate buffer:" << strerror(errno) << std::endl;
+            return;
+        }
+#endif
+        // warm it up ten times.
+        for (int i=0;i<10;i++) {
+            memset(buf,0,max_buffer_size);
+        }
         do {
             int wstatus;
             // sleep for interval.
@@ -488,8 +521,28 @@ static void run_app(const struct parsed_args& pargs) {
                 break;
             }
             // TODO: call cache inspector, set up cinfo
-            usleep(300000);
-            cinfo->page.cache_size[0] = static_cast<uint64_t>(rand());
+            memset(buf,0,max_buffer_size);
+            uint32_t res[pargs.num_datapoints];
+            if (eval_cache_size(pargs.cache_size_hint_kbytes,
+                                pargs.faster_thp,
+                                pargs.slower_thp,
+                                res,
+                                pargs.num_datapoints,
+                                pargs.is_write,
+                                pargs.timing_by,
+                                10, // search depth
+                                5, // num_iter_per_sample
+                                (1ull<<27), // num_bytes_per_iter
+                                buf, // buffer
+                                (1ull<<27), // buffer size
+                                false) != 0) { // warm_up_cpu
+                std::cerr << "eval_cache_size() failed." << std::endl;
+                return;
+            } else {
+                for (uint32_t i=0;i<pargs.num_datapoints;i++) {
+                    cinfo->page.cache_size[i] = res[i];
+                }
+            }
             if (kill(pid,SIG_CONT) != 0) {
                 std::cerr << "failed to continue app, " << strerror(errno) << std::endl;
                 break;
@@ -499,6 +552,11 @@ static void run_app(const struct parsed_args& pargs) {
                 break;
             }
         }while(true);
+#if USE_HUGEPAGE
+        munmap(buf, max_buffer_size);
+#else
+        free(buf);
+#endif
     } else {
         // child.
         char cwd[1024];
