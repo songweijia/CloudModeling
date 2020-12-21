@@ -85,6 +85,7 @@ add_library(ci STATIC
     src/schedule.cpp
     src/cache_size.cpp
     src/linux_perf_counters.cpp
+    src/cache_info_shm.cpp
 )
 target_include_directories(ci PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
@@ -103,7 +104,7 @@ target_include_directories(ci-bin PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
 )
-target_link_libraries(ci-bin ci)
+target_link_libraries(ci-bin ci rt)
 set_target_properties(ci-bin PROPERTIES OUTPUT_NAME ci)
 add_custom_command(TARGET ci-bin POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/sample.schedule

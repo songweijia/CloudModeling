@@ -4,3 +4,4 @@
 #include <ci/rand_lat.hpp>
 #include <ci/schedule.hpp>
 #include <ci/cache_size.hpp>
+#include <ci/cache_info_shm.hpp>

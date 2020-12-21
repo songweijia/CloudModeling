@@ -6,12 +6,16 @@
 #include <getopt.h>
 #include <fstream>
 #include <ci/ci.hpp>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 using namespace cacheinspector;
 
 #define OPT_SEQ_THP             "sequential_throughput"
 #define OPT_READ_LAT            "read_latency"
 #define OPT_CACHE_SIZE          "cache_size"
+#define OPT_RUNAPP              "runapp"
 #define OPT_BUF_SIZE            "buffer_size"
 #define OPT_TOT_SIZE            "total_size"
 #define OPT_NUM_DPS             "num_datapoints"
@@ -27,6 +31,8 @@ using namespace cacheinspector;
 #define OPT_TIMING_BY_RDTSC     "rdtsc"
 #define OPT_TIMING_BY_PERF_CPUCYCLE "perf_cpu_cycle"
 #define OPT_TIMING_BY_HW_CPUCYCLE   "hw_cpu_cycle"
+#define OPT_CMDLINE             "exec"
+#define OPT_CACHE_INFO_FILE     "cache_info_file"
 #define OPT_HELP                "help"
 
 #define HELP_INFO   \
@@ -61,6 +67,17 @@ using namespace cacheinspector;
     "   [--" OPT_CACHE_SIZE_HINT " <the hint of the the cache size in KiB, default is 20480>]\n" \
     "   [--" OPT_NUM_DPS " <number of data points, default is 1>]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "\n5. Run Application: --" OPT_RUNAPP "\n" \
+    "Compulsory arguments:\n" \
+    "   --" OPT_CMDLINE " <the commandline to run the app> \n" \
+    "   --" OPT_FASTER_TIER_THP " <the throughput of the faster cache tier in GiB/s (CLOCK_GETTIME) or Bytes/tick (RDTSC) or Bytes/cycle (*_CPU_CYCLE)>\n" \
+    "   --" OPT_SLOWER_TIER_THP " <the throughput of the slower cache tier in GiB/s (CLOCK_GETTIME) or Bytes/tick (RDTSC) or Bytes/cycle (*_CPU_CYCLE)>\n" \
+    "Optional arguments:\n" \
+    "   [--" OPT_IS_WRITE "] This option specifies that given throughput numbers are for write. If not specified, those numbers are for read.\n" \
+    "   [--" OPT_CACHE_SIZE_HINT " <the hint of the the cache size in KiB, default is 20480>]\n" \
+    "   [--" OPT_NUM_DPS " <number of data points, default is 1>]\n" \
+    "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
+    "   [--" OPT_CACHE_INFO_FILE " <the shared memory file for application to read cache info, default is /ci/cache_info> ]" \
     "\n*. Print this message: --" OPT_HELP 
 
 static struct option long_options[] = {
@@ -68,6 +85,7 @@ static struct option long_options[] = {
     {OPT_READ_LAT,          no_argument,0,0},
     {OPT_SCHEDULE,          no_argument,0,0},
     {OPT_CACHE_SIZE,        no_argument,0,0},
+    {OPT_RUNAPP,            no_argument,0,0},
     {OPT_BUF_SIZE,          required_argument,0,0},
     {OPT_TOT_SIZE,          required_argument,0,0},
     {OPT_NUM_DPS,           required_argument,0,0},
@@ -78,6 +96,8 @@ static struct option long_options[] = {
     {OPT_CACHE_SIZE_HINT,   required_argument,0,0},
     {OPT_IS_WRITE,          no_argument,0,0},
     {OPT_TIMING_BY,         required_argument,0,0},
+    {OPT_CMDLINE,           required_argument,0,0},
+    {OPT_CACHE_INFO_FILE,   required_argument,0,0},
     {OPT_HELP,              no_argument,0,'h'}
 };
 
@@ -94,6 +114,8 @@ struct parsed_args {
     bool        is_write = false;
     timing_mechanism_t  timing_by = CLOCK_GETTIME;
     bool        request_help = false;
+    const char* app_cmdline = nullptr;
+    const char* cache_info_file = nullptr;
 
     void set_timing_by(const char* timing_by_string) {
         if (strcmp(OPT_TIMING_BY_GETTIME,timing_by_string) == 0) {
@@ -120,6 +142,12 @@ struct parsed_args {
         } else if (strcmp(cmd,OPT_CACHE_SIZE) == 0) {
             if (num_datapoints == 0)num_datapoints = 1;
             if (cache_size_hint_kbytes == 0)cache_size_hint_kbytes = 20480;
+        } else if (strcmp(cmd,OPT_RUNAPP) == 0){
+            if (num_datapoints == 0)num_datapoints = 1;
+            if (cache_size_hint_kbytes == 0)cache_size_hint_kbytes = 20480;
+            if (cache_info_file == nullptr) {
+                cache_info_file = DEFAULT_CACHE_INFO_SHM_FILE;
+            }
         }
     }
 
@@ -130,11 +158,13 @@ struct parsed_args {
                       << "total_size_mbytes:" << total_size_mbytes << '\n'
                       << "num_datapoints:" << num_datapoints << '\n'
                       << "show_perf:" << show_perf << '\n'
-                      << "schedule_file:" << schedule_file << '\n'
+                      << "schedule_file:" << (schedule_file?schedule_file:"nullptr") << '\n'
                       << "faster_thp:" << faster_thp << '\n'
                       << "slower_thp:" << slower_thp << '\n'
                       << "cache_size_hint_kbytes:" << cache_size_hint_kbytes << '\n'
                       << "timing_by:" << timing_by << '\n'
+                      << "app_cmdline:" << (app_cmdline?app_cmdline:"nullptr") << '\n'
+                      << "cache_info_file:" << (cache_info_file?cache_info_file:"nullptr") << '\n'
                       << "request_help:" << request_help << std::endl;
         } else {
             std::cout << "This parsed_args is uninitialized." << std::endl;
@@ -416,6 +446,19 @@ static void run_cache_size(const struct parsed_args& pargs) {
     }
 }
 
+// defined in cache_info_shm.cpp
+namespace cacheinspector {
+extern cache_info_t* initialize_cache_info(const char* ci_shm_file);
+extern void destroy_cache_info(const char* ci_shm_file);
+}
+
+static void run_app(const struct parsed_args& pargs) {
+    // prepare the shared memory map
+    cache_info_t* cinfo = initialize_cache_info(pargs.cache_info_file);
+    // destroy shared memory map
+    destroy_cache_info(pargs.cache_info_file);
+}
+
 int main(int argc, char** argv) {
     struct parsed_args pargs;
     while (1) {
@@ -427,7 +470,8 @@ int main(int argc, char** argv) {
             if (strcmp(long_options[option_index].name,OPT_SEQ_THP) == 0 ||
                 strcmp(long_options[option_index].name,OPT_SCHEDULE) == 0 ||
                 strcmp(long_options[option_index].name,OPT_CACHE_SIZE) == 0 ||
-                strcmp(long_options[option_index].name,OPT_READ_LAT) == 0) {
+                strcmp(long_options[option_index].name,OPT_READ_LAT) == 0 ||
+                strcmp(long_options[option_index].name,OPT_RUNAPP) == 0) {
                 if (pargs.cmd_name != nullptr) {
                     std::cerr << "Error:expect only one command but saw multiple:"
                               << pargs.cmd_name << " and "<< long_options[option_index].name
@@ -456,6 +500,10 @@ int main(int argc, char** argv) {
                 pargs.set_timing_by(optarg);
             } else if (strcmp(long_options[option_index].name,OPT_IS_WRITE) == 0) {
                 pargs.is_write = false;
+            } else if (strcmp(long_options[option_index].name,OPT_CMDLINE) == 0) {
+                pargs.app_cmdline = optarg;
+            } else if (strcmp(long_options[option_index].name,OPT_CACHE_INFO_FILE) == 0) {
+                pargs.cache_info_file = optarg;
             } else {
                 std::cerr << "Unknown argument:" << long_options[option_index].name << std::endl;
                 std::cout << HELP_INFO << std::endl;
@@ -482,6 +530,8 @@ int main(int argc, char** argv) {
         run_schedule(pargs);
     } else if (strcmp(pargs.cmd_name, OPT_CACHE_SIZE) == 0) {
         run_cache_size(pargs);
+    } else if (strcmp(pargs.cmd_name, OPT_RUNAPP) == 0){
+        run_app(pargs);
     } else {
         std::cout << pargs.cmd_name << " to be supported." << std::endl;
     }
