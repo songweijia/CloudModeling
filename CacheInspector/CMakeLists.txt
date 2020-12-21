@@ -111,6 +111,13 @@ add_custom_command(TARGET ci-bin POST_BUILD
     ${CMAKE_CURRENT_BINARY_DIR}/
 )
 
+add_executable(example src/example_app.cpp)
+target_include_directories(example PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+)
+target_link_libraries(example ci rt)
+
 # make install
 install(TARGETS ci EXPORT ci
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/)

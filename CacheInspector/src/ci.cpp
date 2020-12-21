@@ -9,6 +9,8 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/wait.h>
+#include <assert.h>
 
 using namespace cacheinspector;
 
@@ -452,9 +454,84 @@ extern cache_info_t* initialize_cache_info(const char* ci_shm_file);
 extern void destroy_cache_info(const char* ci_shm_file);
 }
 
+#define SIG_STOP    (19)
+#define SIG_CONT    (18)
+#define RUNAPP_INTERVAL_USEC (1000000)
+
 static void run_app(const struct parsed_args& pargs) {
     // prepare the shared memory map
     cache_info_t* cinfo = initialize_cache_info(pargs.cache_info_file);
+    cinfo->page.cache_size[0] = 0xaaaaaaaalu; // initial value;
+    pid_t pid = fork();
+    if (pid != 0) {
+        // parent
+        do {
+            int wstatus;
+            // sleep for interval.
+            usleep(RUNAPP_INTERVAL_USEC);
+            // stop application
+            if (waitpid(pid,&wstatus,WNOHANG) < 0) {
+                std::cerr << "failed to wait for app process:" << pid << ", " << strerror(errno) << std::endl;
+                break;
+            }
+            if (WIFEXITED(wstatus)) {
+                std::cout << pargs.app_cmdline << " finished with exit code:" << WEXITSTATUS(wstatus) << std::endl;
+                break;
+            }
+            if (kill(pid,SIG_STOP) != 0) {
+                std::cerr << "failed to stop app, " << strerror(errno) << std::endl;
+                break;
+            }
+            siginfo_t sinfo;
+            if (waitid(P_PID,pid,&sinfo,WSTOPPED) != 0) {
+                std::cerr << "failed to wait for app to stop, " << strerror(errno) << std::endl;
+                break;
+            }
+            // TODO: call cache inspector, set up cinfo
+            usleep(300000);
+            cinfo->page.cache_size[0] = static_cast<uint64_t>(rand());
+            if (kill(pid,SIG_CONT) != 0) {
+                std::cerr << "failed to continue app, " << strerror(errno) << std::endl;
+                break;
+            }
+            if (waitid(P_PID,pid,&sinfo,WCONTINUED) != 0) {
+                std::cerr << "failed to wait for app to continue, " << strerror(errno) << std::endl;
+                break;
+            }
+        }while(true);
+    } else {
+        // child.
+        char cwd[1024];
+        assert(getcwd(cwd,256)==cwd);
+        char* child_argv[256];
+        char* cmd_line = strdup(pargs.app_cmdline);
+        uint32_t pos = 0;
+        uint32_t end = strlen(cmd_line);
+        uint32_t nargs = 0;
+        while(pos < end) {
+            while(cmd_line[pos]==' ' && cmd_line[pos]!='\0') pos ++;
+            if (cmd_line[pos] != '\0') {
+                child_argv[nargs++] = &cmd_line[pos];
+            }
+            while(cmd_line[pos]!=' ' && cmd_line[pos]!='\0') pos ++;
+            cmd_line[pos ++] = '\0';
+        }
+        child_argv[nargs] = nullptr;
+        if (child_argv[0][0] != '/') {
+            strcat(cwd,"/");
+            strcat(cwd,child_argv[0]);
+        } else {
+            strcpy(cwd,child_argv[0]);
+        }
+        if(execv(cwd,child_argv) == -1) {
+            std::cerr << strerror(errno) << std::endl;
+        }
+        std::cout << "nargs=" << nargs << std::endl;
+        std::cout << "child_argv[0]:" << child_argv[0] << std::endl;
+        std::cout << "child_argv[nargs-1]:" << child_argv[nargs-1] << std::endl;
+        std::cout << "cwd:" << cwd << std::endl;
+        free(cmd_line);
+    }
     // destroy shared memory map
     destroy_cache_info(pargs.cache_info_file);
 }
