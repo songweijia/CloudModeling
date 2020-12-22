@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <assert.h>
+#include <sys/resource.h>
 
 using namespace cacheinspector;
 
@@ -457,6 +458,8 @@ extern void destroy_cache_info(const char* ci_shm_file);
 #define SIG_STOP    (19)
 #define SIG_CONT    (18)
 #define RUNAPP_INTERVAL_USEC (1000000)
+#define CI_SHELL_NICE   (-20)
+#define CI_APP_NICE     (0)
 
 static void run_app(const struct parsed_args& pargs) {
     // check args
@@ -471,6 +474,9 @@ static void run_app(const struct parsed_args& pargs) {
     // prepare the shared memory map
     cache_info_t* cinfo = initialize_cache_info(pargs.cache_info_file);
     cinfo->page.cache_size[0] = 0xaaaaaaaalu; // initial value;
+    // set priority
+    setpriority(PRIO_PROCESS,getpid(),CI_SHELL_NICE);
+    // fork
     pid_t pid = fork();
     if (pid != 0) {
         // parent
@@ -559,6 +565,7 @@ static void run_app(const struct parsed_args& pargs) {
 #endif
     } else {
         // child.
+        setpriority(PRIO_PROCESS,getpid(),CI_APP_NICE);
         char cwd[1024];
         assert(getcwd(cwd,256)==cwd);
         char* child_argv[256];
