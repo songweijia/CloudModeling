@@ -36,6 +36,7 @@ using namespace cacheinspector;
 #define OPT_TIMING_BY_HW_CPUCYCLE   "hw_cpu_cycle"
 #define OPT_CMDLINE             "exec"
 #define OPT_CACHE_INFO_FILE     "cache_info_file"
+#define OPT_SAMPLING_INTERVAL	"sampling_interval"
 #define OPT_HELP                "help"
 
 #define HELP_INFO   \
@@ -81,6 +82,7 @@ using namespace cacheinspector;
     "   [--" OPT_NUM_DPS " <number of data points, default is 1>]\n" \
     "   [--" OPT_TIMING_BY " <" OPT_TIMING_BY_GETTIME "|" OPT_TIMING_BY_RDTSC "|" OPT_TIMING_BY_PERF_CPUCYCLE "|" OPT_TIMING_BY_HW_CPUCYCLE ", default is " OPT_TIMING_BY_GETTIME ">]\n" \
     "   [--" OPT_CACHE_INFO_FILE " <the shared memory file for application to read cache info, default is /ci/cache_info> ]" \
+    "   [--" OPT_SAMPLING_INTERVAL " <the sampling interval in second, default is 10 second> ]" \
     "\n*. Print this message: --" OPT_HELP 
 
 static struct option long_options[] = {
@@ -101,6 +103,7 @@ static struct option long_options[] = {
     {OPT_TIMING_BY,         required_argument,0,0},
     {OPT_CMDLINE,           required_argument,0,0},
     {OPT_CACHE_INFO_FILE,   required_argument,0,0},
+    {OPT_SAMPLING_INTERVAL, required_argument,0,0},
     {OPT_HELP,              no_argument,0,'h'}
 };
 
@@ -119,6 +122,7 @@ struct parsed_args {
     bool        request_help = false;
     const char* app_cmdline = nullptr;
     const char* cache_info_file = nullptr;
+    uint64_t	sampling_interval = 0;
 
     void set_timing_by(const char* timing_by_string) {
         if (strcmp(OPT_TIMING_BY_GETTIME,timing_by_string) == 0) {
@@ -148,9 +152,8 @@ struct parsed_args {
         } else if (strcmp(cmd,OPT_RUNAPP) == 0){
             if (num_datapoints == 0)num_datapoints = 1;
             if (cache_size_hint_kbytes == 0)cache_size_hint_kbytes = 20480;
-            if (cache_info_file == nullptr) {
-                cache_info_file = DEFAULT_CACHE_INFO_SHM_FILE;
-            }
+            if (cache_info_file == nullptr)cache_info_file = DEFAULT_CACHE_INFO_SHM_FILE;
+	    if (sampling_interval == 0)sampling_interval = 10;
         }
     }
 
@@ -168,6 +171,7 @@ struct parsed_args {
                       << "timing_by:" << timing_by << '\n'
                       << "app_cmdline:" << (app_cmdline?app_cmdline:"nullptr") << '\n'
                       << "cache_info_file:" << (cache_info_file?cache_info_file:"nullptr") << '\n'
+                      << "sampling_interval:" << sampling_interval << " second" << '\n'
                       << "request_help:" << request_help << std::endl;
         } else {
             std::cout << "This parsed_args is uninitialized." << std::endl;
@@ -457,7 +461,6 @@ extern void destroy_cache_info(const char* ci_shm_file);
 
 #define SIG_STOP    (19)
 #define SIG_CONT    (18)
-#define RUNAPP_INTERVAL_USEC (1000000)
 #define CI_SHELL_NICE   (-20)
 #define CI_APP_NICE     (0)
 
@@ -505,15 +508,16 @@ static void run_app(const struct parsed_args& pargs) {
             memset(buf,0,max_buffer_size);
         }
         do {
-            int wstatus;
+            int wstatus = 0;
+	    pid_t exited = 0;
             // sleep for interval.
-            usleep(RUNAPP_INTERVAL_USEC);
+            usleep(pargs.sampling_interval*1000000);
             // stop application
-            if (waitpid(pid,&wstatus,WNOHANG) < 0) {
+            if ((exited = waitpid(pid,&wstatus,WNOHANG)) < 0) {
                 std::cerr << "failed to wait for app process:" << pid << ", " << strerror(errno) << std::endl;
                 break;
             }
-            if (WIFEXITED(wstatus)) {
+            if ((exited == pid) && WIFEXITED(wstatus)) {
                 std::cout << pargs.app_cmdline << " finished with exit code:" << WEXITSTATUS(wstatus) << std::endl;
                 break;
             }
@@ -646,6 +650,8 @@ int main(int argc, char** argv) {
                 pargs.app_cmdline = optarg;
             } else if (strcmp(long_options[option_index].name,OPT_CACHE_INFO_FILE) == 0) {
                 pargs.cache_info_file = optarg;
+	    } else if (strcmp(long_options[option_index].name,OPT_SAMPLING_INTERVAL) == 0) {
+		pargs.sampling_interval = std::stoull(optarg);
             } else {
                 std::cerr << "Unknown argument:" << long_options[option_index].name << std::endl;
                 std::cout << HELP_INFO << std::endl;

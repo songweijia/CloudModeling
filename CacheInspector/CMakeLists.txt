@@ -71,6 +71,8 @@ endif()
 
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/include/ci/config.h.in ${CMAKE_BINARY_DIR}/include/ci/config.h)
 
+find_package(Threads)
+
 if (${ENABLE_PERF_TRACEPOINT} EQUAL 1)
 add_custom_target(ci-tracepoint-header
     COMMAND ${CMAKE_SOURCE_DIR}/src/generate-tracepoint-ids-header.sh
@@ -98,6 +100,7 @@ set_target_properties(ci PROPERTIES
     SOVERSION ${ci_VERSION}
     VERSION ${ci_build_VERSION}
 )
+target_link_libraries(ci ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(ci-bin src/ci.cpp)
 target_include_directories(ci-bin PRIVATE
