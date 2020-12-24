@@ -1,6 +1,7 @@
 #ifndef _UTIL_HPP_
 #define _UTIL_HPP_
 
+#include <time.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
@@ -65,6 +66,12 @@ inline void boost_cpu() {
   volatile double y = 237846834.2835876175f;
   uint64_t cnt = (1ull<<20);
   while(cnt--) y*=x;
+}
+
+inline uint64_t get_monotonic_usec() {
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC,&now);
+  return now.tv_sec*1000000 + now.tv_nsec/1000;
 }
 
 #endif//_UTIL_H_

@@ -490,6 +490,7 @@ static void run_app(const struct parsed_args& pargs) {
 #define ADDR (void*)(0x6000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE)
 #define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
+#define SLEEP_USEC  (300000)
         buf = mmap(ADDR, max_buffer_size, PROTECTION, FLAGS, -1, 0);
         if (buf == MAP_FAILED) {
             perror("mmap");
@@ -503,24 +504,39 @@ static void run_app(const struct parsed_args& pargs) {
             return;
         }
 #endif
-        // warm it up ten times.
-        for (int i=0;i<10;i++) {
+        // warm it up five times.
+        for (int i=0;i<5;i++) {
             memset(buf,0,max_buffer_size);
+        }
+        uint64_t start_usec = get_monotonic_usec();
+        uint64_t next_sample_usec = start_usec + pargs.sampling_interval*1000000;
+        uint64_t end_usec;
+        if (pargs.sampling_interval == 0) {
+            next_sample_usec = std::numeric_limits<uint64_t>::max();
         }
         do {
             int wstatus = 0;
-	    pid_t exited = 0;
             // sleep for interval.
-            usleep(pargs.sampling_interval*1000000);
+            bool done = false; 
+            do {
+                usleep(SLEEP_USEC);
+                pid_t exited = 0;
+                if ((exited = waitpid(pid,&wstatus,WNOHANG)) < 0) {
+                    std::cerr << "failed to wait for app process:" << pid << ", " << strerror(errno) << std::endl;
+                    break;
+                }
+                if ((exited == pid) && WIFEXITED(wstatus)) {
+                    std::cout << pargs.app_cmdline << " finished with exit code:" << WEXITSTATUS(wstatus) << std::endl;
+                    done = true;
+                    break;
+                }
+            } while (get_monotonic_usec() < next_sample_usec);
+            if (done) {
+                end_usec = get_monotonic_usec();
+                break;
+            }
+            next_sample_usec = get_monotonic_usec() + pargs.sampling_interval*1000000;
             // stop application
-            if ((exited = waitpid(pid,&wstatus,WNOHANG)) < 0) {
-                std::cerr << "failed to wait for app process:" << pid << ", " << strerror(errno) << std::endl;
-                break;
-            }
-            if ((exited == pid) && WIFEXITED(wstatus)) {
-                std::cout << pargs.app_cmdline << " finished with exit code:" << WEXITSTATUS(wstatus) << std::endl;
-                break;
-            }
             if (kill(pid,SIG_STOP) != 0) {
                 std::cerr << "failed to stop app, " << strerror(errno) << std::endl;
                 break;
@@ -567,6 +583,7 @@ static void run_app(const struct parsed_args& pargs) {
 #else
         free(buf);
 #endif
+        std::cout << "timespan: " << (end_usec - start_usec) << " us" << std::endl;
     } else {
         // child.
         setpriority(PRIO_PROCESS,getpid(),CI_APP_NICE);
