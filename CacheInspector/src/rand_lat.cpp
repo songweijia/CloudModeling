@@ -419,7 +419,8 @@ static double traverse_cyclic_linked_list(int64_t num, uint64_t* cll,
 
     double ret = 0.0f;
     if (timing == CLOCK_GETTIME) {
-        ret = static_cast<double>(clk_t2.tv_sec - clk_t1.tv_sec) * 1e9 + static_cast<double>(clk_t2.tv_nsec - clk_t1.tv_nsec);
+        // minus 40 ns to compensate for the timing overhead.
+        ret = static_cast<double>(clk_t2.tv_sec - clk_t1.tv_sec) * 1e9 + static_cast<double>(clk_t2.tv_nsec - clk_t1.tv_nsec) - 40;
     } else if (timing == RDTSC) {
         ret = static_cast<double>(tsc_t2 - tsc_t1);
     } else if (timing == PERF_CPU_CYCLE) {
