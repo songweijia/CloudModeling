@@ -476,7 +476,7 @@ static void run_app(const struct parsed_args& pargs) {
     }
     // prepare the shared memory map
     cache_info_t* cinfo = initialize_cache_info(pargs.cache_info_file);
-    cinfo->page.cache_size[0] = 0xaaaaaaaalu; // initial value;
+    cinfo->page.cache_size[0][0] = 0xaaaaaaaalu; // initial value;
     // set priority
     setpriority(PRIO_PROCESS,getpid(),CI_SHELL_NICE);
     // fork
@@ -566,7 +566,9 @@ static void run_app(const struct parsed_args& pargs) {
                 return;
             } else {
                 for (uint32_t i=0;i<pargs.num_datapoints;i++) {
-                    cinfo->page.cache_size[i] = res[i];
+                    // we currently detecting only one cache level because
+                    // normally only one cache level is shared.
+                    cinfo->page.cache_size[0][i] = res[i];
                 }
             }
             if (kill(pid,SIG_CONT) != 0) {

@@ -11,7 +11,7 @@ int main(int argc, char** argv) {
         int nloop = 10;
         while(--nloop) {
             sleep(2);
-            std::cout << "cache_size[0]=" << ci->page.cache_size[0] << std::endl;
+            std::cout << "cache_size[0][0]=" << ci->page.cache_size[0][0] << std::endl;
         }
     }
     return 0;
