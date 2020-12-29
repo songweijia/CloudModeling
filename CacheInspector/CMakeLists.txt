@@ -110,8 +110,8 @@ target_include_directories(ci-bin PRIVATE
 target_link_libraries(ci-bin ci rt)
 set_target_properties(ci-bin PROPERTIES OUTPUT_NAME ci)
 add_custom_command(TARGET ci-bin POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/src/sample.schedule
-    ${CMAKE_CURRENT_BINARY_DIR}/
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src/schedules
+    ${CMAKE_CURRENT_BINARY_DIR}/schedules
 )
 
 add_executable(example src/example_app.cpp)
