@@ -463,7 +463,7 @@ extern void destroy_cache_info(const char* ci_shm_file);
 #define SIG_CONT    (18)
 #define CI_SHELL_NICE   (-20)
 #define CI_APP_NICE     (0)
-
+#define SLEEP_USEC  (300000)
 static void run_app(const struct parsed_args& pargs) {
     // check args
     if (pargs.faster_thp < 0 || pargs.slower_thp < 0) {
@@ -490,7 +490,6 @@ static void run_app(const struct parsed_args& pargs) {
 #define ADDR (void*)(0x6000000000000000UL)
 #define PROTECTION (PROT_READ | PROT_WRITE)
 #define FLAGS (MAP_SHARED | MAP_ANONYMOUS | MAP_HUGETLB | (21 << MAP_HUGE_SHIFT))
-#define SLEEP_USEC  (300000)
         buf = mmap(ADDR, max_buffer_size, PROTECTION, FLAGS, -1, 0);
         if (buf == MAP_FAILED) {
             perror("mmap");
@@ -498,6 +497,7 @@ static void run_app(const struct parsed_args& pargs) {
             return;
         }
 #else
+	const int page_size = getpagesize();
         if (posix_memalign(&buf, page_size, max_buffer_size)) {
             perror("posix_memalign");
             std::cerr << "failed to allocate buffer:" << strerror(errno) << std::endl;
