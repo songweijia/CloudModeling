@@ -664,7 +664,7 @@ int main(int argc, char** argv) {
             } else if (strcmp(long_options[option_index].name,OPT_TIMING_BY) == 0) {
                 pargs.set_timing_by(optarg);
             } else if (strcmp(long_options[option_index].name,OPT_IS_WRITE) == 0) {
-                pargs.is_write = false;
+                pargs.is_write = true;
             } else if (strcmp(long_options[option_index].name,OPT_CMDLINE) == 0) {
                 pargs.app_cmdline = optarg;
             } else if (strcmp(long_options[option_index].name,OPT_CACHE_INFO_FILE) == 0) {
